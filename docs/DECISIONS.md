@@ -1,0 +1,28 @@
+# Decision Log
+
+Decisions made during design, with the reason and the source used to verify each one. Newest last.
+
+| # | Date | Decision | Why | Verified against |
+|---|---|---|---|---|
+| 1 | 2026-11-02 | Use case: 30-day readmission prevention worklist for a hospital care management team | Easy for customers to understand, covers every required layer, quantifiable KPIs (readmission rate, HRRP penalties, cost avoided) | Databricks Healthcare Outcome Map: Predict Disease Risk / Reduce Hospital Readmissions |
+| 2 | 2026-11-02 | Start a new repo instead of reusing an existing build | No existing build covered all six layers; the closest healthcare demos were authored by others | Local repo survey and git authorship |
+| 3 | 2026-11-02 | Write-back from the app to the lakehouse uses Lakebase CDF | Native, about 15 s latency, no job to maintain; Public Preview and HIPAA compliant | docs.databricks.com/aws/en/oltp/projects/lakebase-cdf; HIPAA status confirmed by the author |
+| 4 | 2026-11-02 | CDF source tables use `REPLICA IDENTITY FULL`; CDF destination schema carries no masks or row filters | CDF requirements | Lakebase CDF docs |
+| 5 | 2026-11-02 | Dev workspace `fevm-classic-stable`; dev catalog `rtr_demo_catalog` | Author's existing workspace and catalog; catalog uses its own S3 storage, not default storage (CDF requirement) | `databricks catalogs get` |
+| 6 | 2026-11-02 | Accept `account users` SELECT on `rtr_demo_catalog` as a dev-only deviation | Data is fully synthetic; revoking would break other demos in the catalog; prod uses a dedicated catalog with no account-wide grants | `databricks grants get-effective` |
+| 7 | 2026-11-02 | Naming: `<source_system>_raw` / `_bronze`, `<data_domain>_silver`, `<data_product>_gold` | Scalable, intuitive layer and ownership signal in every schema name | Author's convention |
+| 8 | 2026-11-02 | Lakebase project and database named after the app (`readmission-worklist` / `readmission_worklist`); Postgres schemas mirror UC schemas | Synced tables map UC schema to Postgres schema; CDF maps one Postgres schema to one UC schema; Postgres cannot join across databases, and the app joins the synced worklist with its own writes | Lakebase synced tables docs; `databricks postgres create-synced-table -h` |
+| 9 | 2026-11-02 | Synced tables live in `rtr_demo_catalog.readmission_worklist_gold` with a `_synced` suffix; no Lakebase catalog registration | Synced tables can be created in a standard UC catalog; the UC schema name becomes the Postgres schema name | docs.databricks.com/aws/en/oltp/projects/sync-tables |
+| 10 | 2026-11-02 | App writes only to Lakebase `readmission_worklist_app` (`outreach_activity`, `program_setting_change`); CDF lands them in `readmission_worklist_app_bronze` | The app is a source system; landing as bronze keeps the layer suffix convention | Author decision |
+| 11 | 2026-11-02 | Program Settings tab for Care Management Leadership; seed files for the initial load | Leadership owns thresholds and capacity with an audit trail, reusing the CDF pattern | Author decision |
+| 12 | 2026-11-02 | Access audit through Databricks Apps telemetry (OpenTelemetry) into `readmission_worklist_app_bronze.app_otel_*`; curated into `care_management_silver.app_audit_event` | Native, GA, HIPAA compliant, configured in the bundle (`telemetry_export_destinations.unity_catalog.logs_table / metrics_table / traces_table`); replaces a custom audit write path | Apps observability docs; bundle JSON schema (CLI v1.19.0); GA and HIPAA status confirmed by the author |
+| 13 | 2026-11-02 | Business audit events (`worklist.viewed`, `outreach.logged`, `settings.changed`, `genie.asked`) are emitted by the app; telemetry carries IDs only, never PHI | Telemetry captures sign-ins and API requests automatically, but not business actions; the landing schema is unmasked | Apps observability docs |
+| 14 | 2026-11-02 | App framework: AppKit (Node/TypeScript/React) | Databricks default and template-aligned | Author decision |
+| 15 | 2026-11-02 | Model: XGBoost on LACE-style features, batch scored daily; `@challenger` promoted to `@champion` only if it beats AUC and calibration gates | Explainable drivers clinicians recognize; no real-time requirement | Design |
+
+## Open items to verify during build
+
+- The Genie Conversation API can be called on behalf of the signed-in user from an AppKit app, so UC policies apply to Genie answers.
+- Whether app stdout/stderr is exported to `app_otel_logs` without instrumentation (not stated in the docs); the build emits audit events explicitly either way.
+- The OpenTelemetry logs exporter setup for Node/AppKit (the docs show traces and metrics only).
+- Delivery semantics for app telemetry through Zerobus; de-duplicate on `event_id` regardless.

@@ -33,19 +33,20 @@ flowchart LR
         ML[readmission_worklist_gold<br/>readmission_risk @champion]
         GW[readmission_worklist_gold<br/>care_worklist + ai_query brief]
         GO[readmission_worklist_gold<br/>readmission_outcome + metric view]
-        CDF[readmission_worklist_app_bronze<br/>lb_*_history]
+        CDF[readmission_worklist_app_bronze<br/>lb_*_history + app_otel_*]
     end
     subgraph Lakebase["Lakebase database readmission_worklist"]
         LW[readmission_worklist_gold<br/>*_synced, read-only]
         LO[readmission_worklist_app<br/>outreach_activity, program_setting_change]
     end
-    APP[Databricks App<br/>Worklist / Program / Program Settings]
+    APP[Databricks App - AppKit<br/>Worklist / Program / Program Settings]
     GENIE[Genie Agent<br/>Readmission Program]
 
     SIM --> VOL -->|Lakeflow SDP<br/>Auto Loader| BR --> SV --> GF
     GF --> ML --> GW -->|synced table| LW --> APP
     APP -->|outreach + settings| LO -->|Lakebase CDF| CDF --> SV
     SV --> GO --> GENIE --> APP
+    APP -->|app telemetry<br/>OpenTelemetry| CDF
     GF -.->|monthly retrain| ML
 ```
 
@@ -58,18 +59,18 @@ flowchart LR
 | 3 | Score + prioritize | `score_discharges` task | `readmission_worklist_gold.readmission_risk@champion`, `discharge_risk_score` |
 | 4 | Build + publish worklist | `build_worklist` task | `ai_query` outreach brief, `readmission_worklist_gold.care_worklist`, Lakebase synced tables |
 | 5 | Work the worklist | Care Manager, in the app's Worklist tab | Lakebase `readmission_worklist_gold.care_worklist_synced` (read), `readmission_worklist_app.outreach_activity` (insert) |
-| 6 | Sync changes back | Lakebase CDF (change data feed) | `readmission_worklist_app_bronze.lb_*_history` |
+| 6 | Sync changes back | Lakebase CDF (change data feed) + Databricks Apps telemetry | `readmission_worklist_app_bronze.lb_*_history`, `app_otel_logs` / `_traces` / `_metrics` |
 | 7 | Measure + ask Genie | Leadership / Quality, in the app's Program tab | Genie Agent over `readmission_worklist_gold.readmission_outcome` and `readmission_program_metrics` |
 | 8 | Retrain + repeat | `<env>_readmit_model_training` (monthly) | MLflow experiment, `@challenger` promoted to `@champion` only if it beats the current model |
 
-The full operating pattern, deployment pattern, and entity-relationship diagram are in [`docs/readmission-worklist-high-level-design.pdf`](docs/readmission-worklist-high-level-design.pdf).
+Design decisions are logged in [`docs/DECISIONS.md`](docs/DECISIONS.md). The full operating pattern, deployment pattern, and entity-relationship diagram are in [`docs/readmission-worklist-high-level-design.pdf`](docs/readmission-worklist-high-level-design.pdf).
 
 ### Naming convention
 
 | Layer | Pattern | This solution |
 |---|---|---|
 | Raw (files) | `<source_system>_raw` | `ehr_raw` (volume `ehr_landing`) |
-| Bronze | `<source_system>_bronze` | `ehr_bronze`; `readmission_worklist_app_bronze` (the app is a source system; Lakebase CDF lands here) |
+| Bronze | `<source_system>_bronze` | `ehr_bronze`; `readmission_worklist_app_bronze` (the app is a source system; Lakebase CDF and app telemetry land here) |
 | Silver | `<data_domain>_silver` | `clinical_silver`, `care_management_silver` |
 | Gold | `<data_product>_gold` | `readmission_worklist_gold` (tables, metric view, and the model) |
 | Shared governance | `phi_governance` | Mask and row filter functions used by every product |
@@ -85,6 +86,7 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 - The `readmission_worklist_app_bronze` schema (Lakebase CDF destination) is excluded from masks and filters because CDF destinations must not carry them; access is restricted to the pipeline identity instead.
 - Unity Catalog row filters do not apply inside Lakebase Postgres, so the app scopes every query to the signed-in user's facility assignments. Only the minimum columns a care manager needs are synced to Lakebase.
 - The Program Settings tab is limited to the `care_mgmt_leadership` group; every change is an append-only row with who, when, and why.
+- **Access audit:** the app emits `audit.*` events (`worklist.viewed`, `outreach.logged`, `settings.changed`, `genie.asked`) through Databricks Apps telemetry (OpenTelemetry, GA) into `app_otel_logs`; the pipeline de-duplicates them on `event_id` into `care_management_silver.app_audit_event`. Telemetry carries IDs only, never PHI.
 - **Dev-only deviation:** `rtr_demo_catalog` grants `account users` SELECT catalog-wide, which inherits into the unmasked CDF landing schema. Accepted for dev because all data is synthetic; prod uses a dedicated catalog with no account-wide grants.
 
 ### Key design decisions and trade-offs
@@ -96,6 +98,8 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | Worklist status derived from `outreach_activity` | Synced tables are read-only in Postgres | One join in the app query |
 | Lakebase CDF for write-back | Native, about 15 s latency, no job to maintain | Public Preview; source tables need `REPLICA IDENTITY FULL` |
 | Program Settings tab writes to Lakebase, applied by the pipeline | Leadership owns thresholds and capacity, with an audit trail, reusing the CDF pattern | Changes take effect on the next daily cycle |
+| Databricks Apps telemetry for audit events | Native OpenTelemetry export to UC, configured in the bundle; no custom write path | Business events still need a small emit helper in the app |
+| AppKit (Node/TypeScript/React) for the app | Databricks default and template-aligned | Team must be comfortable with TypeScript |
 | Separate Lakebase schemas, one database | Postgres cannot join across databases; the app joins the synced worklist with its own writes | Schema-level ownership must be managed carefully |
 | XGBoost on LACE-style features | Clinicians recognize the drivers; explainable with SHAP | Not a deep clinical model; tuned for adoption |
 
@@ -107,7 +111,8 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | Lakebase Change Data Feed preview | A workspace admin enables "Lakebase Change Data Feed" on the Previews page |
 | Unity Catalog catalog | Must **not** use default storage (a Lakebase CDF requirement). Dev uses `rtr_demo_catalog` |
 | Databricks CLI | v0.294.0 or later (`databricks postgres` command group) |
-| Python | 3.11+ with `databricks-sdk` 0.81.0 or later |
+| Python | 3.11+ with `databricks-sdk` 0.81.0 or later (pipeline, ML, setup) |
+| Node.js | Current LTS, for the AppKit app |
 | Foundation Model endpoint | Any pay-per-token chat model; set through the `llm_endpoint` bundle variable |
 | Permissions | CREATE CATALOG (or an existing catalog), CAN MANAGE on the Lakebase project, workspace admin for preview enablement |
 
@@ -149,7 +154,7 @@ readmission-risk-worklist/
 │   ├── ml/                     # Training, champion/challenger promotion, batch scoring
 │   ├── worklist/               # Worklist build, ai_query briefs, synced table refresh
 │   ├── setup/                  # Lakebase synced table, CDF feed, Genie Agent, ABAC policies
-│   └── app/                    # Databricks App (worklist + program tabs)
+│   └── app/                    # Databricks App, AppKit (Worklist, Program, Program Settings tabs)
 ├── seeds/                      # facility, risk_tier_policy, care_team_assignment
 ├── evidence/                   # Committed run output: notebook outputs, logs, query results
 └── docs/                       # High-level design (PDF and HTML source)
