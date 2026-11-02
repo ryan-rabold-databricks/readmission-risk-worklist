@@ -1,0 +1,6 @@
+resources:
+  schemas:
+    phi_governance:
+      catalog_name: ${var.catalog}
+      name: phi_governance
+      comment: Shared PHI mask and row filter functions used by ABAC policies on tag phi.

@@ -7,3 +7,7 @@ __pycache__/
 node_modules/
 .idea/
 .vscode/
+dist/
+build/
+*.egg-info/
+.pytest_cache/

@@ -1,0 +1,8 @@
+resources:
+  schemas:
+    readmission_worklist_gold:
+      catalog_name: ${var.catalog}
+      name: readmission_worklist_gold
+      comment: >-
+        Readmission worklist data product - features, risk scores, worklist, outcomes,
+        metric view, model readmission_risk, and Lakebase synced tables.

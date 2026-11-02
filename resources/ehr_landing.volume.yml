@@ -1,0 +1,8 @@
+resources:
+  volumes:
+    ehr_landing:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.ehr_raw.name}
+      name: ehr_landing
+      volume_type: MANAGED
+      comment: Landing zone for synthetic EHR extract files, one folder per entity and extract date.

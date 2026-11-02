@@ -1,0 +1,8 @@
+resources:
+  schemas:
+    care_management_silver:
+      catalog_name: ${var.catalog}
+      name: care_management_silver
+      comment: >-
+        Curated care management domain - outreach_activity, risk_tier_policy,
+        care_team_assignment, program_setting, app_audit_event.

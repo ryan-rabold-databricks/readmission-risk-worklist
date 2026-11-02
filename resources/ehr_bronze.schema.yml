@@ -1,0 +1,6 @@
+resources:
+  schemas:
+    ehr_bronze:
+      catalog_name: ${var.catalog}
+      name: ehr_bronze
+      comment: Append-only EHR extract records ingested by Auto Loader, plus quarantined rows.

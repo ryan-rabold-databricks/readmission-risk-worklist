@@ -1,0 +1,73 @@
+# Readmission Prevention Worklist - Declarative Automation Bundle.
+# One bundle deploys every asset per environment; each target reads and writes
+# only its own catalog and Lakebase project (see docs/DECISIONS.md).
+
+bundle:
+  name: readmission_worklist
+
+include:
+  - resources/*.yml
+
+sync:
+  # Only runtime code goes to the workspace.
+  exclude:
+    - docs/**
+    - evidence/**
+    - tests/**
+    - .isaac/**
+
+artifacts:
+  readmit_wheel:
+    type: whl
+    build: uv build --wheel
+    path: .
+
+variables:
+  env:
+    description: Environment name used in job names and the environment guardrail.
+  catalog:
+    description: Unity Catalog catalog that holds every schema for this solution.
+  lakebase_project:
+    description: Lakebase project ID (hyphens only).
+    default: readmission-worklist
+  lakebase_database:
+    description: Lakebase Postgres database (underscores only).
+    default: readmission_worklist
+  llm_endpoint:
+    description: Foundation Model endpoint used by ai_query for outreach briefs.
+    default: databricks-claude-opus-5-5
+  avg_readmission_cost:
+    description: Average cost of one readmission, used for estimated cost avoided.
+    default: "15000"
+  service_principal_id:
+    description: Application ID of the service principal that runs prod workloads.
+    default: ""
+
+targets:
+  dev:
+    # No "mode: development": it prefixes UC schemas with dev_<user>_ even when
+    # presets.name_prefix is empty, which breaks the UC-to-Postgres schema mapping
+    # (DECISIONS.md #8). The development-mode behaviors we want are set explicitly.
+    default: true
+    workspace:
+      host: https://fevm-classic-stable-v61z4f.cloud.databricks.com
+    presets:
+      trigger_pause_status: PAUSED
+      pipelines_development: true
+      jobs_max_concurrent_runs: 1
+      tags:
+        env: dev
+    variables:
+      env: dev
+      catalog: rtr_demo_catalog
+
+  prod:
+    mode: production
+    # Workspace host comes from --profile so the prod workspace is never hard-coded here.
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      env: prod
+      catalog: prod_care_management
+    run_as:
+      service_principal_name: ${var.service_principal_id}

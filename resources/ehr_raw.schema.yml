@@ -1,0 +1,6 @@
+resources:
+  schemas:
+    ehr_raw:
+      catalog_name: ${var.catalog}
+      name: ehr_raw
+      comment: Raw EHR extract files landed by the source system (volume ehr_landing).

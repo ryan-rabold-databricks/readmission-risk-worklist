@@ -1,0 +1,6 @@
+resources:
+  schemas:
+    clinical_silver:
+      catalog_name: ${var.catalog}
+      name: clinical_silver
+      comment: Curated clinical domain - patient, encounter, diagnosis, follow_up_appointment, facility.

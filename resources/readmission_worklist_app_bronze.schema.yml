@@ -1,0 +1,9 @@
+resources:
+  schemas:
+    readmission_worklist_app_bronze:
+      catalog_name: ${var.catalog}
+      name: readmission_worklist_app_bronze
+      comment: >-
+        App as a source system. Lakebase CDF history (lb_*_history) and Databricks Apps
+        telemetry (app_otel_*). No masks or row filters (CDF requirement); access is
+        restricted to the pipeline identity.

@@ -1,0 +1,24 @@
+[project]
+name = "readmit"
+version = "0.1.0"
+description = "Readmission Prevention Worklist - shared library and job entry points"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+simulator = ["faker>=30"]
+dev = ["pytest>=8", "pyspark>=3.5"]
+
+[project.scripts]
+simulate = "readmit.simulator.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/readmit"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
