@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Readmission Prevention Worklist - High-Level Design</title>
+<style>
+  @page { size: 11in 8.5in; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #1f2a37;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .page {
+    position: relative; width: 11in; height: 8.5in; padding: 34px 36px 28px 36px;
+    page-break-after: always; overflow: hidden; background: #fff;
+  }
+  .page:last-child { page-break-after: auto; }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-start; }
+  h1 { font-size: 21px; margin: 0 0 6px 0; letter-spacing: -0.2px; }
+  .sub { font-size: 11px; color: #4b5563; margin: 0 0 4px 0; }
+  .deploy { font-size: 8px; color: #4b5563; margin: 0; }
+  .ver { font-size: 8px; color: #6b7280; padding-top: 6px; white-space: nowrap; }
+  .pnum { position: absolute; right: 36px; bottom: 18px; font-size: 8px; color: #6b7280; }
+  .legend { position: absolute; left: 36px; bottom: 26px; font-size: 7.4px; color: #4b5563; line-height: 1.75; max-width: 900px; }
+  .wires { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+
+  /* ---------- Page 1: operating pattern ---------- */
+  .steps { position: relative; margin-top: 22px; display: grid; grid-template-columns: repeat(4, 1fr); column-gap: 30px; row-gap: 40px; }
+  .card { position: relative; border: 1px solid #c9ced6; border-radius: 6px; padding: 14px 10px 10px 10px; height: 252px; display: flex; flex-direction: column; background: #fff; }
+  .card::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 5px; border-radius: 6px 6px 0 0; background: var(--own); }
+  .card.r { --own: #b91c1c; } .card.g { --own: #2e7d32; } .card.b { --own: #1565c0; }
+  .ctitle { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 10.5px; letter-spacing: 0.2px; margin-bottom: 10px; }
+  .badge { width: 21px; height: 21px; border-radius: 50%; background: var(--own); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex: none; }
+  .who { display: flex; gap: 10px; align-items: flex-start; }
+  .who svg { width: 30px; height: 30px; flex: none; margin-top: 2px; }
+  .actor { font-size: 7.6px; font-weight: 700; margin-bottom: 4px; font-family: Menlo, Consolas, monospace; }
+  .actor.plain { font-family: inherit; font-size: 8.2px; }
+  .desc { font-size: 8.4px; line-height: 1.38; color: #374151; }
+  .pills { margin-top: auto; display: flex; flex-direction: column; gap: 3px; }
+  .pill { display: flex; align-items: center; gap: 5px; border: 1px solid #cfd4db; border-radius: 4px; background: #f7f8fa; padding: 3px 6px; font-size: 7.1px; line-height: 1.2; }
+  .pill b { font-weight: 700; }
+  .pill i { font-style: normal; color: #6b7280; }
+  .pill svg { width: 9px; height: 9px; flex: none; }
+  .loop-label { position: absolute; font-size: 8px; font-weight: 700; color: #4b5563; background: #fff; padding: 0 4px; }
+  .bands { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 40px 0 40px; }
+  .band { border: 1px solid #c9ced6; border-radius: 5px; padding: 9px 12px; font-size: 8.2px; line-height: 1.45; color: #374151; }
+  .band h4 { margin: 0 0 4px 0; font-size: 8.4px; letter-spacing: 0.3px; color: #1f2a37; }
+
+  /* ---------- Page 2: deployment pattern ---------- */
+  .panels { display: grid; grid-template-columns: 1.05fr 1fr; gap: 26px; margin-top: 18px; position: relative; }
+  .panel { border: 1.5px solid #ff5f46; border-radius: 6px; padding: 14px 16px 12px 16px; position: relative; height: 595px; }
+  .panel::before { content: ""; position: absolute; left: -1.5px; right: -1.5px; top: -1.5px; height: 5px; background: #ff5f46; border-radius: 6px 6px 0 0; }
+  .panel h3 { margin: 0 0 12px 0; color: #1565c0; font-size: 12.5px; text-align: center; }
+  .node { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #c9ced6; border-radius: 4px; padding: 6px 9px; background: #f7f8fa; font-size: 7.4px; }
+  .node .k { color: #6b7280; font-size: 6.6px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 1px; }
+  .node code { white-space: nowrap; font-family: Menlo, Consolas, monospace; font-size: 8px; color: #1f2a37; }
+  .node.cat { background: #fff8e6; border-color: #e0b13b; }
+  .node.ws { background: #fff1ef; border-color: #ff8a78; }
+  .node svg { width: 18px; height: 18px; flex: none; }
+  .tree { margin: 6px 0 0 14px; padding-left: 14px; border-left: 1px solid #9aa3ae; }
+  .tree > .row { position: relative; margin: 5px 0; display: flex; align-items: flex-start; gap: 8px; }
+  .tree > .row::before { content: ""; position: absolute; left: -14px; top: 12px; width: 13px; border-top: 1px solid #9aa3ae; }
+  .tree > .row:last-child::after { content: ""; position: absolute; left: -15px; top: 13px; bottom: -6px; width: 3px; background: #fff; }
+  .schema { min-width: 98px; }
+  .tree > .row > .node { flex: none; }
+  .leaf { display: flex; flex-wrap: wrap; gap: 3px; flex: 1 1 0; min-width: 0; padding-top: 2px; }
+  .leaf span { border: 1px solid #d5dae1; border-radius: 3px; padding: 2px 5px; font-size: 6.9px; font-family: Menlo, Consolas, monospace; background: #fff; }
+  .leaf span.mv { border-style: dashed; }
+  .leaf span.ro { background: #eef4fb; }
+  .rule { position: absolute; left: 16px; right: 16px; border: 1px solid #3b5b7a; border-radius: 4px; background: #f4f7fa; padding: 6px 9px; font-size: 7.4px; line-height: 1.4; }
+  .rule.red { border-color: #ff8a78; background: #fff1ef; }
+  .rule h5 { margin: 0 0 2px 0; font-size: 8px; }
+  .bind { position: absolute; font-size: 7.2px; font-weight: 700; color: #1f2a37; background: #fff; padding: 0 3px; white-space: nowrap; }
+
+  /* ---------- Page 3: ERD ---------- */
+  .erd { position: relative; margin-top: 30px; height: 630px; }
+  .ent { position: absolute; width: 170px; border: 1px solid #8f98a3; border-radius: 2px; background: #fff; font-size: 6.5px; }
+  .ent .th { background: #c9ced3; font-weight: 700; font-size: 7.3px; padding: 4px 6px; letter-spacing: 0.3px; }
+  .ent .loc { font-weight: 400; font-size: 6.2px; color: #374151; display: block; margin-top: 1px; letter-spacing: 0; }
+  .ent .c { display: flex; justify-content: space-between; padding: 0 6px; height: 10.4px; line-height: 10.4px; border-top: 1px solid #eef0f3; white-space: nowrap; }
+  .ent .c .t { color: #4b5563; font-size: 6px; }
+  .ent .c .t b { color: #1f2a37; }
+  .ent .c.pk .n { font-weight: 700; text-decoration: underline; }
+  .phi { display: inline-block; background: #fde8e6; color: #b91c1c; border-radius: 2px; padding: 0 2px; font-size: 5.2px; line-height: 7px; margin-left: 3px; vertical-align: 1px; font-weight: 700; }
+  .notes { position: absolute; left: 36px; bottom: 26px; font-size: 7.3px; color: #4b5563; line-height: 1.7; width: 700px; }
+  .erd-legend { position: absolute; right: 36px; bottom: 28px; width: 200px; font-size: 7.2px; color: #374151; }
+  .erd-legend h4 { font-size: 10px; margin: 0 0 6px 0; }
+  .erd-legend .li { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  .erd-legend svg { width: 46px; height: 12px; flex: none; }
+</style>
+</head>
+<body>
+
+<!-- Reusable icon symbols -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-person" viewBox="0 0 32 32"><g fill="none" stroke="#e8573f" stroke-width="1.6"><circle cx="16" cy="11" r="5"/><path d="M6 27c1.5-6 5.5-8.5 10-8.5s8.5 2.5 10 8.5"/></g></symbol>
+    <symbol id="i-team" viewBox="0 0 32 32"><g fill="none" stroke="#e8573f" stroke-width="1.5"><circle cx="10" cy="11" r="3.5"/><circle cx="22" cy="11" r="3.5"/><path d="M3 24c1-4 3.8-6 7-6s6 2 7 6"/><path d="M15 24c1-4 3.8-6 7-6s6 2 7 6"/></g></symbol>
+    <symbol id="i-job" viewBox="0 0 32 32"><g fill="none" stroke="#e8573f" stroke-width="1.5"><rect x="12.5" y="3" width="7" height="6" rx="1"/><path d="M16 9v5M7 14h18M7 14v4M16 14v4M25 14v4"/><path d="M4 18h6l-3 6z"/><rect x="13" y="18" width="6" height="6"/><circle cx="25" cy="21" r="3"/></g></symbol>
+    <symbol id="i-sync" viewBox="0 0 32 32"><g fill="none" stroke="#e8573f" stroke-width="1.5"><ellipse cx="11" cy="8" rx="6" ry="2.5"/><path d="M5 8v14c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V8"/><path d="M20 12h8l-3-3M28 20h-8l3 3"/></g></symbol>
+    <symbol id="i-genie" viewBox="0 0 32 32"><g fill="none" stroke="#e8573f" stroke-width="1.5"><path d="M5 6h22v15H14l-6 5v-5H5z"/><path d="M16 9l1.3 3.2L20.5 13.5l-3.2 1.3L16 18l-1.3-3.2-3.2-1.3 3.2-1.3z"/></g></symbol>
+    <symbol id="i-table" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><rect x="1" y="2" width="10" height="8" rx="0.8"/><path d="M1 5h10M1 7.5h10M4.5 5v5M8 5v5"/></g></symbol>
+    <symbol id="i-vol" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><path d="M1 3h4l1 1.2h5V10H1z"/></g></symbol>
+    <symbol id="i-model" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><circle cx="3" cy="3" r="1.4"/><circle cx="3" cy="9" r="1.4"/><circle cx="9" cy="6" r="1.4"/><path d="M4.3 3.6L7.7 5.4M4.3 8.4L7.7 6.6"/></g></symbol>
+    <symbol id="i-db" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><ellipse cx="6" cy="2.8" rx="4" ry="1.5"/><path d="M2 2.8v6.4c0 .8 1.8 1.5 4 1.5s4-.7 4-1.5V2.8M2 6c0 .8 1.8 1.5 4 1.5S10 6.8 10 6"/></g></symbol>
+    <symbol id="i-app" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><rect x="1" y="1.5" width="10" height="9" rx="1"/><path d="M1 4h10"/><circle cx="2.6" cy="2.75" r=".35"/><circle cx="3.9" cy="2.75" r=".35"/></g></symbol>
+    <symbol id="i-ai" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><path d="M6 1l1.2 3.3L10.5 5.5 7.2 6.7 6 10 4.8 6.7 1.5 5.5l3.3-1.2z"/></g></symbol>
+    <symbol id="i-tag" viewBox="0 0 12 12"><g fill="none" stroke="#e8573f" stroke-width="0.9"><path d="M1.5 1.5h4.2l4.8 4.8-4.2 4.2-4.8-4.8z"/><circle cx="3.8" cy="3.8" r=".8"/></g></symbol>
+    <symbol id="i-catalog" viewBox="0 0 20 20"><g fill="none" stroke="#e8573f" stroke-width="1.1"><path d="M10 2l8 4-8 4-8-4z"/><path d="M2 10l8 4 8-4M2 14l8 4 8-4"/></g></symbol>
+    <symbol id="i-ws" viewBox="0 0 20 20"><g fill="none" stroke="#e8573f" stroke-width="1.1"><rect x="1.5" y="2.5" width="17" height="15" rx="1.5"/><path d="M1.5 6h17"/><path d="M10 8.5l4.5 2.2L10 13l-4.5-2.3z"/></g></symbol>
+    <symbol id="i-schema" viewBox="0 0 20 20"><g fill="none" stroke="#e8573f" stroke-width="1.1"><ellipse cx="10" cy="4.5" rx="6.5" ry="2.5"/><path d="M3.5 4.5v11c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-11M3.5 10c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5"/></g></symbol>
+  </defs>
+</svg>
+
+<!-- =============================== PAGE 1 =============================== -->
+<section class="page" id="p1">
+  <div class="hdr">
+    <div>
+      <h1>Readmission Prevention Worklist &mdash; Recommended Operating Pattern</h1>
+      <p class="sub">Eight operational steps from the nightly EHR extract to care manager outreach and measured 30-day outcomes, with the tables and assets touched in each step.</p>
+      <p class="deploy">Deployment: workspace &lt;env&gt;_clinical_analytics &bull; catalog &lt;env&gt;_care_management &bull; Lakebase project &lt;env&gt;-care-management</p>
+    </div>
+    <div class="ver">Draft v0.2 &bull; November 2, 2026</div>
+  </div>
+
+  <div class="steps" id="steps">
+    <!-- 1 -->
+    <div class="card r" id="s1">
+      <div class="ctitle"><span class="badge">1</span>CONFIGURE PROGRAM</div>
+      <div class="who"><svg><use href="#i-person"/></svg><div>
+        <div class="actor plain">Care Management Leadership</div>
+        <div class="desc">Set risk-tier cut-offs, outreach SLAs, and care manager to facility assignments in version-controlled seed files.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.facility</b><i>(INSERT, UPDATE)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.risk_tier_policy</b><i>(INSERT, UPDATE)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.care_team_assignment</b><i>(INSERT, UPDATE)</i></div>
+      </div>
+    </div>
+    <!-- 2 -->
+    <div class="card b" id="s2">
+      <div class="ctitle"><span class="badge">2</span>INGEST + CURATE</div>
+      <div class="who"><svg><use href="#i-job"/></svg><div>
+        <div class="actor">&lt;env&gt;_readmit_daily_cycle &rsaquo; ingest_curate</div>
+        <div class="desc">Auto Loader picks up new EHR extracts, expectations quarantine bad rows, and features plus matured 30-day labels refresh.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-vol"/></svg><b>raw.ehr_landing</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>bronze.*_raw</b><i>(APPEND)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.patient, encounter, diagnosis, follow_up_appointment</b><i>(UPSERT)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>lakebase_sync.lb_outreach_activity_history</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.outreach_activity</b><i>(APPEND)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.discharge_features, readmission_outcome</b><i>(REFRESH)</i></div>
+      </div>
+    </div>
+    <!-- 3 -->
+    <div class="card b" id="s3">
+      <div class="ctitle"><span class="badge">3</span>SCORE + PRIORITIZE</div>
+      <div class="who"><svg><use href="#i-job"/></svg><div>
+        <div class="actor">&lt;env&gt;_readmit_daily_cycle &rsaquo; score_discharges</div>
+        <div class="desc">Score yesterday's discharges with the @champion model, explain the top three risk drivers, and assign a risk tier.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-model"/></svg><b>ml.readmission_risk@champion</b><i>(LOAD)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.discharge_features</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.risk_tier_policy</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.discharge_risk_score</b><i>(APPEND)</i></div>
+      </div>
+    </div>
+    <!-- 4 -->
+    <div class="card b" id="s4">
+      <div class="ctitle"><span class="badge">4</span>BUILD + PUBLISH WORKLIST</div>
+      <div class="who"><svg><use href="#i-job"/></svg><div>
+        <div class="actor">&lt;env&gt;_readmit_daily_cycle &rsaquo; build_worklist</div>
+        <div class="desc">Route high- and medium-risk discharges to the assigned care manager, draft an outreach brief with ai_query, and refresh Lakebase.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.discharge_risk_score</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>silver.care_team_assignment</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-ai"/></svg><b>Foundation Model endpoint</b><i>(GENERATE)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.care_worklist</b><i>(MERGE)</i></div>
+        <div class="pill"><svg><use href="#i-db"/></svg><b>Lakebase worklist.care_worklist</b><i>(SYNC)</i></div>
+      </div>
+    </div>
+    <!-- 8 (bottom-left) -->
+    <div class="card b" id="s8">
+      <div class="ctitle"><span class="badge">8</span>RETRAIN + REPEAT</div>
+      <div class="who"><svg><use href="#i-job"/></svg><div>
+        <div class="actor">&lt;env&gt;_readmit_model_training</div>
+        <div class="desc">Monthly: retrain on matured labels and promote the @challenger only if it beats @champion on AUC and calibration gates.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.discharge_features</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-model"/></svg><b>MLflow experiment</b><i>(LOG)</i></div>
+        <div class="pill"><svg><use href="#i-model"/></svg><b>ml.readmission_risk@challenger</b><i>(REGISTER)</i></div>
+        <div class="pill"><svg><use href="#i-model"/></svg><b>ml.readmission_risk@champion</b><i>(PROMOTE)</i></div>
+      </div>
+    </div>
+    <!-- 7 -->
+    <div class="card r" id="s7">
+      <div class="ctitle"><span class="badge">7</span>MEASURE + ASK GENIE</div>
+      <div class="who"><svg><use href="#i-genie"/></svg><div>
+        <div class="actor plain">Care Management Leadership / Quality</div>
+        <div class="desc">Track reach rate, 7-day follow-up, and readmissions by tier and facility; ask follow-up questions in plain English.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-ai"/></svg><b>Readmission Program Genie Agent</b><i>(ASK)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.readmission_program_metrics</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.readmission_outcome</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>gold.care_worklist</b><i>(READ)</i></div>
+      </div>
+    </div>
+    <!-- 6 -->
+    <div class="card b" id="s6">
+      <div class="ctitle"><span class="badge">6</span>SYNC OUTREACH BACK</div>
+      <div class="who"><svg><use href="#i-sync"/></svg><div>
+        <div class="actor plain">Lakebase CDF (change data feed)</div>
+        <div class="desc">Every outreach insert lands in Unity Catalog within about 15 seconds as an append-only change log, with no job to build or run.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-db"/></svg><b>Lakebase app.outreach_activity</b><i>(CDC)</i></div>
+        <div class="pill"><svg><use href="#i-table"/></svg><b>lakebase_sync.lb_outreach_activity_history</b><i>(APPEND)</i></div>
+      </div>
+    </div>
+    <!-- 5 -->
+    <div class="card g" id="s5">
+      <div class="ctitle"><span class="badge">5</span>WORK THE WORKLIST</div>
+      <div class="who"><svg><use href="#i-team"/></svg><div>
+        <div class="actor plain">Care Manager</div>
+        <div class="desc">Open today's prioritized list, review the drivers and brief, call the patient, and log the outcome and next step.</div></div></div>
+      <div class="pills">
+        <div class="pill"><svg><use href="#i-app"/></svg><b>Readmission Worklist app</b><i>(SIGN IN)</i></div>
+        <div class="pill"><svg><use href="#i-db"/></svg><b>Lakebase worklist.care_worklist</b><i>(READ)</i></div>
+        <div class="pill"><svg><use href="#i-db"/></svg><b>Lakebase app.outreach_activity</b><i>(INSERT)</i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bands" id="bands">
+    <div class="band"><h4>READMISSION WORKLIST APP</h4>Care managers work their list and log outreach; leadership uses the Program tab with the embedded Genie Agent. The app reads and writes Lakebase, and Genie runs on behalf of the signed-in user.</div>
+    <div class="band"><h4>GOVERNANCE (EVERY STEP)</h4>PHI columns carry governed tags. Tag-driven ABAC policies mask direct identifiers and filter rows by facility for every SQL, notebook, and Genie read. The Lakebase CDF landing schema stays unmasked (a CDF requirement), so only the pipeline identity can read it; policies apply from silver onward.</div>
+  </div>
+
+  <div class="legend">
+    Ownership: red = Care Management Leadership &bull; green = Care Manager &bull; blue = automated Data Platform job or managed sync<br>
+    Actions: READ = read only &bull; INSERT = add rows &bull; UPDATE = change rows &bull; APPEND = append-only insert &bull; UPSERT = AUTO CDC apply &bull; MERGE = keyed upsert &bull; REFRESH = materialized view recompute &bull; LOAD / REGISTER / PROMOTE = UC model alias operations &bull; LOG = MLflow run &bull; GENERATE = ai_query call &bull; SYNC = Delta to Lakebase synced table &bull; CDC = Lakebase CDF to Unity Catalog &bull; ASK = Genie question &bull; SIGN IN = authenticated app session
+  </div>
+  <div class="pnum">Page 1 of 3</div>
+  <svg class="wires" id="w1"></svg>
+</section>
+
+<!-- =============================== PAGE 2 =============================== -->
+<section class="page" id="p2">
+  <div class="hdr">
+    <div>
+      <h1>Readmission Prevention Worklist &mdash; Environment-Local Deployment Pattern</h1>
+      <p class="sub">One Declarative Automation Bundle deploys every asset per environment; each workspace reads and writes only its own &lt;env&gt; catalog and Lakebase project.</p>
+    </div>
+    <div class="ver">Draft v0.2 &bull; November 2, 2026</div>
+  </div>
+
+  <div class="panels" id="panels">
+    <!-- Catalog -->
+    <div class="panel">
+      <h3>Catalog Design Pattern</h3>
+      <div class="node cat" id="n-cat"><svg><use href="#i-catalog"/></svg><div><span class="k">Unity Catalog catalog</span><code>&lt;env&gt;_care_management</code></div></div>
+      <div class="tree">
+        <div class="row"><div class="node schema"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>raw</code></div></div><div class="leaf"><span>Volume: ehr_landing</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>bronze</code></div></div><div class="leaf"><span>patient_raw</span><span>encounter_raw</span><span>diagnosis_raw</span><span>appointment_raw</span><span>quarantine_raw</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>silver</code></div></div><div class="leaf"><span>patient</span><span>encounter</span><span>diagnosis</span><span>follow_up_appointment</span><span>outreach_activity</span><span>facility</span><span>care_team_assignment</span><span>risk_tier_policy</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>gold</code></div></div><div class="leaf"><span class="mv">discharge_features</span><span>discharge_risk_score</span><span>care_worklist</span><span class="mv">readmission_outcome</span><span class="mv">readmission_program_metrics (metric view)</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>ml</code></div></div><div class="leaf"><span>Model: readmission_risk (@champion, @challenger)</span></div></div>
+        <div class="row"><div class="node schema" id="n-lbsync"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>lakebase_sync</code></div></div><div class="leaf"><span class="ro">lb_outreach_activity_history (Lakebase CDF; restricted, no masks)</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-schema"/></svg><div><span class="k">Schema</span><code>governance</code></div></div><div class="leaf"><span>fn mask_direct_identifier</span><span>fn mask_birth_date</span><span>fn filter_by_facility</span><span>ABAC policies on tag phi</span></div></div>
+      </div>
+      <div class="rule" style="bottom:66px"><h5>PHI tagging rule</h5>Every PHI column carries governed tag <b>phi = direct_identifier | quasi_identifier</b>; ABAC policies attached to the silver and gold schemas apply masks and the facility row filter automatically to new tables. lakebase_sync is excluded because CDF destinations must not carry masks or filters.</div>
+      <div class="rule" style="bottom:12px"><h5>Minimum-necessary rule</h5>Only worklist columns a care manager needs to make the call leave the lakehouse; Lakebase never holds diagnosis history or the full chart.</div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="panel">
+      <h3>Workspace Design Pattern</h3>
+      <div class="node ws" id="n-ws"><svg><use href="#i-ws"/></svg><div><span class="k">Databricks workspace</span><code>&lt;env&gt;_clinical_analytics</code></div></div>
+      <div class="tree">
+        <div class="row"><div class="node schema"><svg><use href="#i-job"/></svg><div><span class="k">Lakeflow</span><code>Pipeline</code></div></div><div class="leaf"><span>&lt;env&gt;_readmit_pipeline (serverless SDP)</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-job"/></svg><div><span class="k">Lakeflow</span><code>Jobs</code></div></div><div class="leaf"><span>&lt;env&gt;_readmit_daily_cycle: ingest_curate &rarr; score_discharges &rarr; build_worklist</span><span>&lt;env&gt;_readmit_model_training (monthly)</span><span>&lt;env&gt;_readmit_setup (synced table + CDF + Genie, idempotent)</span><span>&lt;env&gt;_readmit_source_simulator (demo only)</span></div></div>
+        <div class="row"><div class="node schema" id="n-lb"><svg><use href="#i-schema"/></svg><div><span class="k">Lakebase project</span><code>&lt;env&gt;-care-management</code></div></div><div class="leaf"><span>branch production / db care_mgmt</span><span class="ro">schema worklist (synced from gold, read-only): care_worklist</span><span>schema app (app-owned, REPLICA IDENTITY FULL): outreach_activity</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-app"/></svg><div><span class="k">Databricks App</span><code>&lt;env&gt;-readmission-worklist</code></div></div><div class="leaf"><span>resources: postgres, sql_warehouse, genie_space</span><span>Worklist tab</span><span>Program tab</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-genie"/></svg><div><span class="k">Genie Agent</span><code>Readmission Program</code></div></div><div class="leaf"><span>gold.readmission_program_metrics</span><span>gold.readmission_outcome</span><span>gold.care_worklist</span></div></div>
+        <div class="row"><div class="node schema"><svg><use href="#i-ai"/></svg><div><span class="k">Serving</span><code>Foundation Model</code></div></div><div class="leaf"><span>${var.llm_endpoint} (pay-per-token)</span><span>SQL warehouse &lt;env&gt;_readmit_wh</span></div></div>
+      </div>
+      <div class="rule red" style="bottom:66px"><h5>App access rule</h5>UC row filters do not reach Postgres, so every app query is scoped to the signed-in user's facility assignments; Genie runs on behalf of the user so UC policies apply.</div>
+      <div class="rule red" style="bottom:12px"><h5>Environment guardrail</h5>Bundle targets dev and prod set &lt;env&gt;; jobs reject any catalog or Lakebase target whose prefix does not match the job's &lt;env&gt; parameter.</div>
+    </div>
+  </div>
+  <div class="pnum">Page 2 of 3</div>
+  <svg class="wires" id="w2"></svg>
+</section>
+
+<!-- =============================== PAGE 3 =============================== -->
+<section class="page" id="p3">
+  <div class="hdr">
+    <div>
+      <h1>Readmission Worklist Entity-Relationship Diagram</h1>
+      <p class="sub">Tables deployed in &lt;env&gt;_care_management (silver, gold) and Lakebase care_mgmt; recommended logical keys and workflow relationships.</p>
+    </div>
+  </div>
+  <div class="erd" id="erd"></div>
+  <div class="notes">
+    Status, tier, type, disposition, and payer columns are controlled STRINGs. <span class="phi">PHI</span> marks columns carrying governed tag phi; ABAC policies mask them for non-care-team readers.<br>
+    PK/FK are Unity Catalog informational constraints (not enforced); required columns are NOT NULL; jobs enforce uniqueness, idempotency, and referential checks. AK columns are hashed to generate the PK.<br>
+    Every silver and gold table also carries audit_created_at / _by / _process / _run_id and audit_updated_* columns (omitted above for readability).<br>
+    gold.readmission_program_metrics (metric view over readmission_outcome) defines readmission_rate, reach_rate, followup_7d_rate, and est_cost_avoided once, for Genie and the app.
+  </div>
+  <div class="erd-legend">
+    <h4>Legend</h4>
+    <div class="li"><svg viewBox="0 0 46 12"><path d="M2 6H44M6 2v8M9 2v8M33 6l11-5M33 6l11 5" stroke="#4b5563" fill="none"/><circle cx="29" cy="6" r="2.5" fill="#fff" stroke="#4b5563"/></svg>1 to zero-or-many</div>
+    <div class="li"><svg viewBox="0 0 46 12"><path d="M2 6H44M6 2v8M9 2v8M40 2v8" stroke="#4b5563" fill="none"/><circle cx="34" cy="6" r="2.5" fill="#fff" stroke="#4b5563"/></svg>1 to zero-or-one</div>
+    <div class="li"><svg viewBox="0 0 46 12"><path d="M2 6H44" stroke="#4b5563" stroke-dasharray="3 2" fill="none"/></svg>Logical reference (across Lakebase)</div>
+    <div class="li"><b style="text-decoration:underline">PK</b>&nbsp;primary key &bull; FK foreign key &bull; AK alternate key</div>
+  </div>
+  <div class="pnum">Page 3 of 3</div>
+  <svg class="wires" id="w3"></svg>
+</section>
+
+<script>
+/* ---------- ERD definition ---------- */
+const T = (n, t, k, nn, phi) => ({ n, t, k: k || "", nn: !!nn, phi: !!phi });
+const ENTS = [
+  { id: "facility", x: 0, y: 0, loc: "silver", cols: [
+    T("facility_id","STRING","PK",1), T("facility_name","STRING","",1), T("region","STRING","",1), T("bed_count","INT"), T("is_active","BOOLEAN","",1)]},
+  { id: "care_team_assignment", x: 0, y: 112, loc: "silver", cols: [
+    T("assignment_id","STRING","PK",1), T("care_manager_email","STRING","AK",1), T("facility_id","STRING","FK, AK",1), T("daily_capacity","INT","",1), T("effective_date","DATE","",1), T("expiration_date","DATE")]},
+  { id: "risk_tier_policy", x: 0, y: 234, loc: "silver", cols: [
+    T("risk_tier","STRING","PK",1), T("min_score","DOUBLE","",1), T("max_score","DOUBLE","",1), T("outreach_sla_hours","INT","",1), T("include_in_worklist","BOOLEAN","",1), T("is_active","BOOLEAN","",1)]},
+
+  { id: "patient", x: 203, y: 0, loc: "silver", cols: [
+    T("patient_id","STRING","PK",1), T("mrn","STRING","",1,1), T("first_name","STRING","",1,1), T("last_name","STRING","",1,1), T("birth_date","DATE","",1,1), T("sex","STRING"), T("phone","STRING","",0,1), T("zip_code","STRING","",0,1), T("primary_payer","STRING","",1)]},
+  { id: "follow_up_appointment", x: 203, y: 160, loc: "silver", cols: [
+    T("appointment_id","STRING","PK",1), T("patient_id","STRING","FK",1), T("source_encounter_id","STRING","FK"), T("scheduled_ts","TIMESTAMP","",1), T("provider_type","STRING","",1), T("status","STRING","",1)]},
+
+  { id: "encounter", x: 406, y: 0, loc: "silver", cols: [
+    T("encounter_id","STRING","PK",1), T("patient_id","STRING","FK",1), T("facility_id","STRING","FK",1), T("encounter_type","STRING","",1), T("admission_type","STRING"), T("admit_ts","TIMESTAMP","",1), T("discharge_ts","TIMESTAMP"), T("discharge_disposition","STRING"), T("drg_code","STRING"), T("length_of_stay_days","INT")]},
+  { id: "diagnosis", x: 406, y: 170, loc: "silver", cols: [
+    T("diagnosis_id","STRING","PK",1), T("encounter_id","STRING","FK, AK",1), T("icd10_code","STRING","AK",1), T("dx_sequence","INT","AK",1), T("is_primary","BOOLEAN","",1), T("condition_group","STRING")]},
+
+  { id: "discharge_features", x: 609, y: 0, loc: "gold (materialized view)", cols: [
+    T("encounter_id","STRING","PK, FK",1), T("patient_id","STRING","FK",1), T("facility_id","STRING","FK",1), T("discharge_date","DATE","",1), T("age_at_discharge","INT","",1), T("length_of_stay_days","INT","",1), T("emergent_admission","BOOLEAN","",1), T("charlson_index","INT","",1), T("ed_visits_6m","INT","",1), T("inpatient_admits_12m","INT","",1), T("primary_condition_group","STRING"), T("discharge_disposition","STRING"), T("followup_within_7d","BOOLEAN","",1), T("readmit_30d (label)","BOOLEAN"), T("label_matured_at","TIMESTAMP")]},
+  { id: "discharge_risk_score", x: 609, y: 222, loc: "gold", cols: [
+    T("score_id","STRING","PK",1), T("encounter_id","STRING","FK, AK",1), T("model_version","STRING","AK",1), T("model_name","STRING","",1), T("risk_score","DOUBLE","",1), T("risk_tier","STRING","FK",1), T("top_drivers","ARRAY<STRUCT>","",1), T("scored_at","TIMESTAMP","",1), T("scoring_run_id","STRING","AK",1)]},
+
+  { id: "care_worklist", x: 812, y: 0, loc: "gold → Lakebase worklist (synced)", cols: [
+    T("worklist_item_id","STRING","PK",1), T("encounter_id","STRING","FK, AK",1), T("score_id","STRING","FK",1), T("patient_id","STRING","FK",1), T("facility_id","STRING","FK",1), T("assigned_care_manager","STRING","",1), T("patient_display_name","STRING","",1,1), T("phone","STRING","",0,1), T("risk_score","DOUBLE","",1), T("risk_tier","STRING","",1), T("top_drivers","ARRAY<STRUCT>","",1), T("outreach_brief","STRING"), T("due_at","TIMESTAMP","",1), T("created_at","TIMESTAMP","",1)]},
+  { id: "outreach_activity", x: 812, y: 212, loc: "Lakebase app (native) → CDF → silver", cols: [
+    T("activity_id","UUID","PK",1), T("worklist_item_id","STRING","FK",1), T("client_request_id","STRING","AK",1), T("care_manager_email","STRING","",1), T("activity_type","STRING","",1), T("activity_ts","TIMESTAMP","",1), T("next_step_due_at","TIMESTAMP"), T("note","STRING","",0,1)]},
+  { id: "readmission_outcome", x: 812, y: 360, loc: "gold (materialized view)", cols: [
+    T("encounter_id","STRING","PK, FK",1), T("worklist_item_id","STRING","FK"), T("facility_id","STRING","FK",1), T("risk_tier","STRING"), T("was_on_worklist","BOOLEAN","",1), T("was_reached","BOOLEAN","",1), T("first_contact_hours","DOUBLE"), T("followup_completed_7d","BOOLEAN","",1), T("readmitted_30d","BOOLEAN"), T("readmit_encounter_id","STRING"), T("outcome_status","STRING","",1)]},
+];
+
+/* parent PK -> child FK; kind: many | one; side: route; dash: logical */
+const RELS = [
+  { p: "facility", pc: "facility_id", c: "care_team_assignment", cc: "facility_id", kind: "many", route: "down" },
+  { p: "facility", pc: "facility_id", c: "encounter", cc: "facility_id", kind: "many", route: "top" },
+  { p: "patient", pc: "patient_id", c: "encounter", cc: "patient_id", kind: "many" },
+  { p: "patient", pc: "patient_id", c: "follow_up_appointment", cc: "patient_id", kind: "many", route: "down" },
+  { p: "encounter", pc: "encounter_id", c: "diagnosis", cc: "encounter_id", kind: "many", route: "down" },
+  { p: "encounter", pc: "encounter_id", c: "discharge_features", cc: "encounter_id", kind: "one" },
+  { p: "discharge_features", pc: "encounter_id", c: "discharge_risk_score", cc: "encounter_id", kind: "many", route: "down" },
+  { p: "risk_tier_policy", pc: "risk_tier", c: "discharge_risk_score", cc: "risk_tier", kind: "many", dash: true, bottom: true },
+  { p: "discharge_risk_score", pc: "score_id", c: "care_worklist", cc: "score_id", kind: "one" },
+  { p: "care_worklist", pc: "worklist_item_id", c: "outreach_activity", cc: "worklist_item_id", kind: "many", route: "down", dash: true },
+  { p: "care_worklist", pc: "worklist_item_id", c: "readmission_outcome", cc: "worklist_item_id", kind: "one", route: "right", off: 0 },
+];
+
+const erd = document.getElementById("erd");
+ENTS.forEach(e => {
+  const d = document.createElement("div");
+  d.className = "ent"; d.id = "e-" + e.id;
+  d.style.left = e.x + "px"; d.style.top = e.y + "px";
+  let h = `<div class="th">${e.id.toUpperCase()}<span class="loc">${e.loc}</span></div>`;
+  e.cols.forEach(c => {
+    const label = (c.k ? c.k + " " : "") + c.n + (c.phi ? '<span class="phi">PHI</span>' : "");
+    h += `<div class="c ${c.k.startsWith("PK") ? "pk" : ""}" data-col="${c.n}"><span class="n">${label}</span><span class="t">${c.t}${c.nn ? " <b>NOT NULL</b>" : ""}</span></div>`;
+  });
+  d.innerHTML = h; erd.appendChild(d);
+});
+
+/* ---------- generic wire helpers ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function rel(el, page) { const r = el.getBoundingClientRect(), p = page.getBoundingClientRect();
+  return { l: r.left - p.left, r: r.right - p.left, t: r.top - p.top, b: r.bottom - p.top, cx: (r.left + r.right) / 2 - p.left, cy: (r.top + r.bottom) / 2 - p.top }; }
+function path(svg, d, opt = {}) { const e = document.createElementNS(NS, "path"); e.setAttribute("d", d);
+  e.setAttribute("fill", opt.fill || "none"); e.setAttribute("stroke", opt.stroke || "#5f6b78"); e.setAttribute("stroke-width", opt.w || 1.3);
+  if (opt.dash) e.setAttribute("stroke-dasharray", opt.dash); svg.appendChild(e); return e; }
+function arrow(svg, x1, y1, x2, y2, opt = {}) { path(svg, `M${x1} ${y1} L${x2} ${y2}`, opt);
+  const a = Math.atan2(y2 - y1, x2 - x1), s = 6;
+  path(svg, `M${x2} ${y2} L${x2 - s * Math.cos(a - 0.45)} ${y2 - s * Math.sin(a - 0.45)} L${x2 - s * Math.cos(a + 0.45)} ${y2 - s * Math.sin(a + 0.45)} Z`, { fill: opt.stroke || "#5f6b78", stroke: opt.stroke || "#5f6b78", w: 1 }); }
+function text(svg, x, y, s, opt = {}) { const e = document.createElementNS(NS, "text"); e.setAttribute("x", x); e.setAttribute("y", y);
+  e.setAttribute("font-size", opt.size || 8); e.setAttribute("font-weight", opt.weight || 700); e.setAttribute("fill", opt.fill || "#4b5563");
+  e.setAttribute("text-anchor", opt.anchor || "middle"); e.setAttribute("font-family", "Helvetica Neue, Arial, sans-serif"); e.textContent = s; svg.appendChild(e); }
+
+/* ---------- page 1 arrows ---------- */
+(function () {
+  const pg = document.getElementById("p1"), svg = document.getElementById("w1"), R = id => rel(document.getElementById(id), pg);
+  const gap = 4;
+  [["s1","s2"],["s2","s3"],["s3","s4"]].forEach(([a,b]) => { const A = R(a), B = R(b); arrow(svg, A.r + gap, A.cy, B.l - gap, B.cy); });
+  [["s5","s6"],["s6","s7"],["s7","s8"]].forEach(([a,b]) => { const A = R(a), B = R(b); arrow(svg, A.l - gap, A.cy, B.r + gap, B.cy); });
+  const s4 = R("s4"), s5 = R("s5"); arrow(svg, s4.cx, s4.b + gap, s5.cx, s5.t - gap);
+  const s8 = R("s8"), s2 = R("s2"), midY = (s2.b + s8.t) / 2;
+  path(svg, `M${s8.cx} ${s8.t - 2} L${s8.cx} ${midY} L${s2.cx} ${midY}`, { stroke: "#c0392b", dash: "4 3" });
+  arrow(svg, s2.cx, midY, s2.cx, s2.b + gap, { stroke: "#c0392b", dash: "4 3" });
+  text(svg, (s8.cx + s2.cx) / 2 + 30, midY - 4, "next daily cycle (retrain monthly)");
+})();
+
+/* ---------- page 2 binding lines ---------- */
+(function () {
+  const pg = document.getElementById("p2"), svg = document.getElementById("w2"), R = id => rel(document.getElementById(id), pg);
+  const cat = R("n-cat"), ws = R("n-ws");
+  path(svg, `M${cat.r} ${cat.cy} L${ws.l} ${cat.cy}`, { w: 1 });
+  text(svg, (cat.r + ws.l) / 2, cat.cy - 4, "READ/WRITE binding", { size: 7.2 });
+})();
+
+/* ---------- page 3 ERD connectors ---------- */
+(function () {
+  const pg = document.getElementById("p3"), svg = document.getElementById("w3");
+  const row = (e, c) => rel(document.querySelector(`#e-${e} .c[data-col="${c}"]`), pg);
+  const box = e => rel(document.getElementById("e-" + e), pg);
+  const col = "#5f6b78";
+  function endOne(x, y, dir) { path(svg, `M${x + dir * 4} ${y - 4} V${y + 4} M${x + dir * 7} ${y - 4} V${y + 4}`, { w: 1, stroke: col }); }
+  function endChild(x, y, dir, kind) {
+    if (kind === "many") { path(svg, `M${x + dir * 10} ${y} L${x} ${y - 4} M${x + dir * 10} ${y} L${x} ${y + 4}`, { w: 1, stroke: col });
+      const c = document.createElementNS(NS, "circle"); c.setAttribute("cx", x + dir * 13.5); c.setAttribute("cy", y); c.setAttribute("r", 2.6); c.setAttribute("fill", "#fff"); c.setAttribute("stroke", col); svg.appendChild(c); }
+    else { path(svg, `M${x + dir * 4} ${y - 4} V${y + 4}`, { w: 1, stroke: col });
+      const c = document.createElementNS(NS, "circle"); c.setAttribute("cx", x + dir * 9.5); c.setAttribute("cy", y); c.setAttribute("r", 2.6); c.setAttribute("fill", "#fff"); c.setAttribute("stroke", col); svg.appendChild(c); }
+  }
+  RELS.forEach(r => {
+    const P = row(r.p, r.pc), C = row(r.c, r.cc), PB = box(r.p), CB = box(r.c), dash = r.dash ? "3 2" : null;
+    if (r.route === "down") {
+      const x = PB.cx;
+      path(svg, `M${x} ${PB.b} V${CB.t}`, { w: 1, stroke: col, dash });
+      path(svg, `M${x - 4} ${PB.b + 4} H${x + 4} M${x - 4} ${PB.b + 7} H${x + 4}`, { w: 1, stroke: col });
+      if (r.kind === "many") path(svg, `M${x} ${CB.t - 10} L${x - 4} ${CB.t} M${x} ${CB.t - 10} L${x + 4} ${CB.t}`, { w: 1, stroke: col });
+      else path(svg, `M${x - 4} ${CB.t - 4} H${x + 4}`, { w: 1, stroke: col });
+      const c = document.createElementNS(NS, "circle"); c.setAttribute("cx", x); c.setAttribute("cy", CB.t - (r.kind === "many" ? 13.5 : 9.5)); c.setAttribute("r", 2.6); c.setAttribute("fill", "#fff"); c.setAttribute("stroke", col); svg.appendChild(c);
+      return;
+    }
+    if (r.route === "top") {
+      const y = Math.min(PB.t, CB.t) - 12, xp = PB.cx + 30, xc = CB.cx - 30;
+      path(svg, `M${xp} ${PB.t} V${y} H${xc} V${CB.t}`, { w: 1, stroke: col, dash });
+      path(svg, `M${xp - 4} ${PB.t - 4} H${xp + 4} M${xp - 4} ${PB.t - 7} H${xp + 4}`, { w: 1, stroke: col });
+      path(svg, `M${xc} ${CB.t - 7} L${xc - 4} ${CB.t} M${xc} ${CB.t - 7} L${xc + 4} ${CB.t}`, { w: 1, stroke: col });
+      return;
+    }
+    if (r.route === "left" || r.route === "right") {
+      const dir = r.route === "left" ? -1 : 1, edgeP = dir < 0 ? PB.l : PB.r, edgeC = dir < 0 ? CB.l : CB.r, gx = edgeP + dir * (16 + r.off);
+      path(svg, `M${edgeP} ${P.cy} H${gx} V${C.cy} H${edgeC}`, { w: 1, stroke: col, dash });
+      endOne(edgeP, P.cy, dir); endChild(edgeC, C.cy, dir, r.kind);
+    } else if (r.bottom) {
+      const y = Math.max(PB.b, CB.b) + 18;
+      path(svg, `M${PB.cx} ${PB.b} V${y} H${CB.cx} V${CB.b}`, { w: 1, stroke: col, dash });
+      path(svg, `M${PB.cx - 4} ${PB.b + 4} H${PB.cx + 4} M${PB.cx - 4} ${PB.b + 7} H${PB.cx + 4}`, { w: 1, stroke: col });
+      path(svg, `M${CB.cx} ${CB.b + 10} L${CB.cx - 4} ${CB.b} M${CB.cx} ${CB.b + 10} L${CB.cx + 4} ${CB.b}`, { w: 1, stroke: col });
+    } else {
+      const g = r.gut == null ? 0.5 : r.gut, gx = PB.r + (CB.l - PB.r) * g;
+      path(svg, `M${PB.r} ${P.cy} H${gx} V${C.cy} H${CB.l}`, { w: 1, stroke: col, dash });
+      endOne(PB.r, P.cy, 1); endChild(CB.l, C.cy, -1, r.kind);
+    }
+  });
+})();
+</script>
+</body>
+</html>
