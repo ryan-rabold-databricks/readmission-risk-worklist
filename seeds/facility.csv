@@ -1,0 +1,6 @@
+facility_id,facility_name,region,bed_count,is_active
+FAC-LMC,Lakeside Medical Center,Metro,520,true
+FAC-NGR,Northgate Regional Hospital,North,310,true
+FAC-SVH,Southview Hospital,South,260,true
+FAC-CCH,Cedar Creek Community Hospital,West,140,true
+FAC-RCH,Riverbend Community Hospital,Rural East,85,true

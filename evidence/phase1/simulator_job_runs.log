@@ -1,0 +1,50 @@
+# dev_readmit_source_simulator task run 350072564854519
+# result: SUCCESS | started: 2026-11-02T17:15:19.992000+00:00 | duration_s: 168
+# parameters: [{"default": "2024-11-01", "name": "history_start"}, {"default": "", "name": "run_date"}]
+
+env=dev catalog=rtr_demo_catalog history_start=2024-11-01 run_date=2026-11-01
+Landed patient
+Landed encounter
+Landed diagnosis
+Landed appointment
+Landed 731 extract dates (2024-11-01 to 2026-11-01); manifest /Volumes/rtr_demo_catalog/ehr_raw/ehr_landing/_manifests/run_20261102T171803Z_95fdb013.json
+  patient: 71,705 records
+  encounter: 319,407 records
+  diagnosis: 488,930 records
+  appointment: 192,117 records
+== Story checks (matured, non-hospice inpatient stays) ==
+Overall: stays=108,069 readmits=17,408 rate=16.1% followup_7d=49.2% est_readmission_cost=$261,120,000
+By facility:
+  FAC-CCH | stays=13,194 | readmit_30d=16.0% | followup_7d=47.9%
+  FAC-LMC | stays=36,295 | readmit_30d=15.2% | followup_7d=55.1%
+  FAC-NGR | stays=25,435 | readmit_30d=15.1% | followup_7d=51.5%
+  FAC-RCH | stays=11,318 | readmit_30d=21.4% | followup_7d=29.0%
+  FAC-SVH | stays=21,827 | readmit_30d=16.1% | followup_7d=48.1%
+By condition group:
+  ami | stays=5,474 | readmit_30d=16.1% | followup_7d=49.7%
+  copd | stays=11,536 | readmit_30d=21.2% | followup_7d=49.1%
+  diabetes | stays=5,840 | readmit_30d=15.7% | followup_7d=49.4%
+  gi | stays=10,667 | readmit_30d=14.4% | followup_7d=49.0%
+  heart_failure | stays=15,517 | readmit_30d=20.8% | followup_7d=47.9%
+  ortho_surgery | stays=12,104 | readmit_30d=9.1% | followup_7d=50.6%
+  other | stays=27,324 | readmit_30d=12.7% | followup_7d=49.4%
+  pneumonia | stays=10,744 | readmit_30d=19.0% | followup_7d=49.5%
+  sepsis | stays=8,863 | readmit_30d=20.2% | followup_7d=48.9%
+Heart failure by 7-day follow-up:
+  followup_7d=False | stays=8,087 | readmit_30d=26.6% | followup_7d=0.0%
+  followup_7d=True | stays=7,430 | readmit_30d=14.5% | followup_7d=100.0%
+COPD + pneumonia by season:
+  winter=False | stays=14,074 | readmit_30d=18.8% | followup_7d=49.0%
+  winter=True | stays=8,206 | readmit_30d=22.3% | followup_7d=49.8%
+
+----
+
+# dev_readmit_source_simulator task run 184865707530252
+# result: SUCCESS | started: 2026-11-02T17:18:35.389000+00:00 | duration_s: 48
+# parameters: [{"default": "2024-11-01", "name": "history_start"}, {"default": "", "name": "run_date"}]
+
+env=dev catalog=rtr_demo_catalog history_start=2024-11-01 run_date=2026-11-01
+All extract dates through 2026-11-01 are already landed; nothing to do.
+
+----
+

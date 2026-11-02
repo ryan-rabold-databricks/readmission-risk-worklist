@@ -3,7 +3,7 @@ name = "readmit"
 version = "0.1.0"
 description = "Readmission Prevention Worklist - shared library and job entry points"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["databricks-sdk>=0.81.0"]
 
 [project.optional-dependencies]
 simulator = ["faker>=30"]

@@ -1,0 +1,604 @@
+"""Build the synthetic EHR universe and slice it into daily extract records.
+
+Entities follow the source shape the bronze layer expects (natural keys only;
+silver hashes them into surrogate keys):
+
+- patient:     mrn, demographics, primary_payer
+- encounter:   encounter_number, mrn, facility_id, type, timestamps, disposition, drg
+- diagnosis:   encounter_number, icd10_code, dx_sequence, dx_type
+- appointment: appointment_number, mrn, source_encounter_number, scheduled_ts, status
+
+Every record carries ``record_updated_ts`` (the CDC sequence column) and lands in the
+extract for ``extract_date = to_date(record_updated_ts)``. Inpatient encounters land
+once at admission (no discharge yet) and again at discharge; appointments land when
+scheduled and again with their final status, so silver must apply changes in order.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from pyspark.sql import Column, DataFrame, SparkSession
+from pyspark.sql import functions as F
+
+from readmit.common.clinical_codes import (
+    CHARLSON_CATEGORIES,
+    COMMON_SECONDARY_CODES,
+    CONDITION_PRIMARY_CODES,
+    DRG_BY_CONDITION,
+    ED_PRIMARY_CODES,
+)
+from readmit.simulator.config import (
+    COMORBIDITY_LOGIT,
+    CONDITION_MIX,
+    ED_MIX,
+    EMERGENT_RATE,
+    FACILITIES,
+    FEMALE_FIRST_NAMES,
+    LAST_NAMES,
+    MALE_FIRST_NAMES,
+    MEDIAN_LOS_DAYS,
+    SimulatorConfig,
+)
+from readmit.simulator.random_exprs import HashRng, literal_map, sigmoid, ts_at, weighted_choice
+
+ENTITIES = ("patient", "encounter", "diagnosis", "appointment")
+
+_HOUR = 3600
+_DAY = 86400
+
+
+@dataclass
+class Universe:
+    extracts: dict[str, DataFrame]  # entity -> records with extract_date, incl. bad rows
+    inpatient: DataFrame  # clean inpatient stays with ground-truth columns, for summaries
+
+
+def build_universe(spark: SparkSession, cfg: SimulatorConfig) -> Universe:
+    rng = HashRng(cfg.seed)
+    # localCheckpoint (eager) materializes shared intermediates once. Without it every
+    # downstream action re-sends and re-plans the full lineage over Spark Connect,
+    # which made a dry run take ~11 minutes. Draws are hash-based, so the checkpointed
+    # values are identical to a recomputation.
+    patients = _patients(spark, cfg, rng).localCheckpoint()
+    days = spark.sql(
+        f"SELECT explode(sequence(DATE'{cfg.history_start}', DATE'{cfg.run_date}')) AS day"
+    ).withColumn("is_winter", F.month("day").isin(12, 1, 2)).withColumn(
+        "is_summer", F.month("day").isin(6, 7, 8)
+    )
+
+    index = _with_followup_plan(_index_inpatient(days, patients, cfg, rng), rng, "idx")
+    index = _with_readmission(index, cfg, rng).localCheckpoint()
+    readmits = _with_followup_plan(_readmit_inpatient(index, rng), rng, "rdm")
+    inpatient = index.unionByName(readmits, allowMissingColumns=True).localCheckpoint()
+    ed = _ed_visits(days, patients, cfg, rng).localCheckpoint()
+
+    clean = {
+        "patient": _patient_records(patients, inpatient, ed, rng, cfg.history_start),
+        "encounter": _encounter_records(inpatient, ed),
+        "diagnosis": _diagnosis_records(inpatient, ed, rng),
+        "appointment": _appointment_records(inpatient),
+    }
+    in_window = F.col("extract_date").between(
+        F.lit(cfg.history_start), F.lit(cfg.run_date)
+    )
+    extracts = {
+        name: _inject_bad_rows(name, df, cfg, rng).filter(in_window)
+        for name, df in clean.items()
+    }
+    return Universe(extracts=extracts, inpatient=inpatient)
+
+
+# --------------------------------------------------------------------------- patients
+
+
+def _patients(spark: SparkSession, cfg: SimulatorConfig, rng: HashRng) -> DataFrame:
+    n = cfg.n_patients
+    idx = F.col("patient_idx")
+    tier = F.when(idx < int(n * 0.05), 0).when(idx < int(n * 0.20), 1).otherwise(2)
+    tier_shift = F.when(tier == 0, 1.6).when(tier == 1, 0.7).otherwise(-0.35)
+    frailty = tier_shift + F.lit(0.8) * rng.normal("frailty", idx)
+    age = F.least(
+        F.lit(98),
+        F.greatest(F.lit(18), F.round(F.lit(58.0) + 13 * rng.normal("age", idx) + 5 * F.col("frailty"))),
+    ).cast("int")
+    facility_weights = [(f.facility_id, f.volume_share) for f in FACILITIES]
+    senior_payer = weighted_choice(
+        rng.u("payer", idx),
+        [("MEDICARE", 0.62), ("MEDICARE_ADVANTAGE", 0.30), ("MEDICAID", 0.05), ("COMMERCIAL", 0.03)],
+    )
+    adult_payer = weighted_choice(
+        rng.u("payer", idx),
+        [("COMMERCIAL", 0.52), ("MEDICAID", 0.32), ("MEDICARE", 0.07), ("SELF_PAY", 0.09)],
+    )
+    area_codes = literal_map({f.facility_id: f.area_code for f in FACILITIES})
+    zip_prefixes = literal_map({f.facility_id: f.zip_prefix for f in FACILITIES})
+
+    comorbid = []
+    for category, (a, b, c) in COMORBIDITY_LOGIT.items():
+        code = CHARLSON_CATEGORIES[category][0]
+        logit = F.lit(a) + F.lit(b) * F.col("frailty") + F.lit(c) * (F.col("age") - 65) / 10
+        comorbid.append(F.when(rng.u(f"cm:{category}", idx) < sigmoid(logit), F.lit(code)))
+
+    return (
+        spark.range(n)
+        .withColumnRenamed("id", "patient_idx")
+        .withColumn("frailty", frailty)
+        .withColumn("age", age)
+        .withColumn("sex", F.when(rng.u("sex", idx) < 0.53, "F").otherwise("M"))
+        .withColumn(
+            "first_name",
+            F.when(F.col("sex") == "F", rng.pick("fn", FEMALE_FIRST_NAMES, idx)).otherwise(
+                rng.pick("fn", MALE_FIRST_NAMES, idx)
+            ),
+        )
+        .withColumn("last_name", rng.pick("ln", LAST_NAMES, idx))
+        .withColumn(
+            "birth_date",
+            F.date_sub(
+                F.lit(cfg.history_start),
+                (F.col("age") * 365 + F.floor(rng.u("dob", idx) * 365)).cast("int"),
+            ),
+        )
+        .withColumn("home_facility_id", weighted_choice(rng.u("home", idx), facility_weights))
+        .withColumn("primary_payer", F.when(F.col("age") >= 65, senior_payer).otherwise(adult_payer))
+        .withColumn(
+            "phone",
+            F.when(rng.u("phone_null", idx) < 0.08, F.lit(None)).otherwise(
+                F.concat(
+                    F.lit("("),
+                    F.element_at(area_codes, F.col("home_facility_id")),
+                    F.lit(") 555-"),
+                    F.lpad(F.floor(rng.u("phone", idx) * 10000).cast("string"), 4, "0"),
+                )
+            ),
+        )
+        .withColumn(
+            "zip_code",
+            F.when(rng.u("zip_null", idx) < 0.03, F.lit(None)).otherwise(
+                F.concat(
+                    F.element_at(zip_prefixes, F.col("home_facility_id")),
+                    F.lpad(F.floor(rng.u("zip", idx) * 100).cast("string"), 2, "0"),
+                )
+            ),
+        )
+        .withColumn(
+            "mrn",
+            F.concat(
+                F.lit("MRN"),
+                F.lpad(F.pmod(idx * F.lit(2654435761), F.lit(1_000_000_000)).cast("string"), 9, "0"),
+            ),
+        )
+        .withColumn("comorbid_codes", F.filter(F.array(*comorbid), lambda c: c.isNotNull()))
+    )
+
+
+def _pick_patient(rng: HashRng, salt: str, key: Column, n: int, tier_probs: tuple[float, float]) -> Column:
+    """Tiered patient pick: frail tiers (lowest patient_idx) are seen far more often."""
+    t = rng.u(f"{salt}:tier", key)
+    v = rng.u(f"{salt}:pat", key)
+    t0, t1 = int(n * 0.05), int(n * 0.20)
+    return (
+        F.when(t < tier_probs[0], F.floor(v * t0))
+        .when(t < tier_probs[0] + tier_probs[1], F.lit(t0) + F.floor(v * (t1 - t0)))
+        .otherwise(F.lit(t1) + F.floor(v * (n - t1)))
+        .cast("long")
+    )
+
+
+def _facility_for(rng: HashRng, salt: str, key: Column, home: Column, p_home: float) -> Column:
+    other = weighted_choice(rng.u(f"{salt}:fac2", key), [(f.facility_id, f.volume_share) for f in FACILITIES])
+    return F.when(rng.u(f"{salt}:fac", key) < p_home, home).otherwise(other)
+
+
+def _daily_slots(days: DataFrame, rng: HashRng, salt: str, base: float, weekend_mult: float, winter_mult: float) -> DataFrame:
+    weekday = F.dayofweek("day")  # 1 = Sunday, 7 = Saturday
+    dow = F.when(weekday.isin(1, 7), weekend_mult).otherwise((7 - 2 * weekend_mult) / 5)
+    season = F.when(F.col("is_winter"), winter_mult).when(F.col("is_summer"), 0.93).otherwise(1.0)
+    n_day = F.greatest(
+        F.lit(1), F.round(F.lit(base) * dow * season * (1 + 0.07 * rng.normal(f"{salt}:vol", "day")))
+    ).cast("int")
+    return days.withColumn("slot", F.explode(F.sequence(F.lit(0), n_day - 1)))
+
+
+# -------------------------------------------------------------------------- inpatient
+
+
+def _condition_weights(rng: HashRng) -> list[tuple[str, Column]]:
+    weights = []
+    for cond, (base, z_coef, winter, summer, senior) in CONDITION_MIX.items():
+        w = (
+            F.lit(base)
+            * F.exp(F.lit(z_coef) * F.col("frailty"))
+            * F.when(F.col("is_winter"), winter).when(F.col("is_summer"), summer).otherwise(1.0)
+            * F.when(F.col("age") >= 65, senior).otherwise(1.0)
+        )
+        weights.append((cond, w))
+    return weights
+
+
+def _disposition(rng: HashRng, salt: str, key: Column) -> Column:
+    z, age, cond = F.col("frailty"), F.col("age"), F.col("condition_group")
+    return weighted_choice(
+        rng.u(f"{salt}:disp", key),
+        [
+            ("HOME", 0.60),
+            ("HOME_HEALTH", 0.17 * (1 + F.greatest(age - 65, F.lit(0)) / 15)),
+            ("SNF", 0.13 * F.exp(0.5 * z) * F.when(age >= 75, 1.8).otherwise(1.0)),
+            ("REHAB", 0.04 * F.when(cond == "ortho_surgery", 4.0).otherwise(1.0)),
+            ("AMA", 0.02 * F.when(age < 50, 2.0).otherwise(1.0)),
+            ("HOSPICE", 0.015 * F.exp(0.5 * z)),
+        ],
+    )
+
+
+def _los_days(rng: HashRng, salt: str, key: Column, mult: float = 1.0) -> Column:
+    median = literal_map(MEDIAN_LOS_DAYS)
+    raw = F.exp(
+        F.log(F.element_at(median, F.col("condition_group")) * mult)
+        + 0.15 * F.col("frailty")
+        + 0.55 * rng.normal(f"{salt}:los", key)
+    )
+    return F.least(F.lit(45), F.greatest(F.lit(1), F.round(raw))).cast("int")
+
+
+def _index_inpatient(days: DataFrame, patients: DataFrame, cfg: SimulatorConfig, rng: HashRng) -> DataFrame:
+    key = F.concat_ws("|", F.col("day").cast("string"), F.col("slot").cast("string"))
+    emergent_rate = literal_map(EMERGENT_RATE)
+    slots = _daily_slots(days, rng, "ip", cfg.inpatient_per_day, 0.7, 1.12).withColumn("ekey", key)
+    return (
+        slots.withColumn("patient_idx", _pick_patient(rng, "ip", F.col("ekey"), cfg.n_patients, (0.12, 0.25)))
+        .join(patients, "patient_idx")
+        .withColumn("facility_id", _facility_for(rng, "ip", F.col("ekey"), F.col("home_facility_id"), 0.88))
+        .withColumn("condition_group", weighted_choice(rng.u("ip:cond", F.col("ekey")), _condition_weights(rng)))
+        .withColumn(
+            "emergent",
+            rng.u("ip:emerg", F.col("ekey")) < F.element_at(emergent_rate, F.col("condition_group")),
+        )
+        .withColumn("los_days", _los_days(rng, "ip", F.col("ekey")))
+        .withColumn("discharge_disposition", _disposition(rng, "ip", F.col("ekey")))
+        .withColumn(
+            "discharge_ts",
+            ts_at(F.col("day"), (10 + F.floor(rng.u("ip:dh", F.col("ekey")) * 8)) * _HOUR
+                  + F.floor(rng.u("ip:dm", F.col("ekey")) * 60) * 60),
+        )
+        .withColumn(
+            "admit_ts",
+            ts_at(F.date_sub(F.col("day"), F.col("los_days")), F.floor(rng.u("ip:ah", F.col("ekey")) * _DAY)),
+        )
+        .withColumn(
+            "encounter_number",
+            F.concat(F.lit("IP"), F.date_format("day", "yyMMdd"), F.lpad(F.col("slot").cast("string"), 4, "0")),
+        )
+        .withColumn("is_index", F.lit(True))
+    )
+
+
+def _with_followup_plan(df: DataFrame, rng: HashRng, salt: str) -> DataFrame:
+    """Plan the post-discharge follow-up appointment for each inpatient stay."""
+    k = F.col("encounter_number")
+    fac = F.col("facility_id")
+    sched_rate = F.element_at(literal_map({f.facility_id: f.followup_scheduled_rate for f in FACILITIES}), fac)
+    within_rate = F.element_at(literal_map({f.facility_id: f.followup_within_7d_rate for f in FACILITIES}), fac)
+    complete_rate = F.element_at(literal_map({f.facility_id: f.followup_completion_rate for f in FACILITIES}), fac)
+    disp = F.col("discharge_disposition")
+    cond = F.col("condition_group")
+    provider = (
+        F.when(cond.isin("heart_failure", "ami") & (rng.u(f"{salt}:prov", k) < 0.6), "CARDIOLOGY")
+        .when((cond == "copd") & (rng.u(f"{salt}:prov", k) < 0.5), "PULMONOLOGY")
+        .when((cond == "ortho_surgery") & (rng.u(f"{salt}:prov", k) < 0.6), "ORTHOPEDICS")
+        .otherwise("PRIMARY_CARE")
+    )
+    within7 = rng.u(f"{salt}:w7", k) < within_rate
+    offset = F.when(within7, 2 + F.floor(rng.u(f"{salt}:off", k) * 6)).otherwise(
+        8 + F.floor(F.pow(rng.u(f"{salt}:off", k), 1.5) * 20)
+    ).cast("int")
+    return (
+        df.withColumn(
+            "followup_scheduled",
+            (disp != "HOSPICE")
+            & (rng.u(f"{salt}:sched", k) < sched_rate * F.when(disp == "AMA", 0.5).otherwise(1.0)),
+        )
+        .withColumn("followup_offset_days", offset)
+        .withColumn(
+            "followup_completes",
+            rng.u(f"{salt}:comp", k) < complete_rate * (1 - 0.06 * F.greatest(F.col("frailty"), F.lit(0.0))),
+        )
+        .withColumn(
+            "followup_7d_planned",
+            F.col("followup_scheduled") & within7 & F.col("followup_completes"),
+        )
+        .withColumn("provider_type", provider)
+        .withColumn(
+            "scheduled_ts",
+            ts_at(
+                F.date_add(F.to_date("discharge_ts"), F.col("followup_offset_days")),
+                (8 + F.floor(rng.u(f"{salt}:sh", k) * 9)) * _HOUR,
+            ),
+        )
+    )
+
+
+def _with_readmission(df: DataFrame, cfg: SimulatorConfig, rng: HashRng) -> DataFrame:
+    m = cfg.readmit
+    k = F.col("encounter_number")
+    cond = F.col("condition_group")
+    followup_effect = F.when(cond == "heart_failure", m.followup_7d_heart_failure).otherwise(m.followup_7d)
+    logit = (
+        F.lit(m.intercept)
+        + m.frailty * F.col("frailty")
+        + m.los_per_day * F.least(F.col("los_days"), F.lit(15))
+        + m.emergent * F.col("emergent").cast("int")
+        + F.element_at(literal_map(m.condition), cond)
+        + F.element_at(literal_map(m.disposition), F.col("discharge_disposition"))
+        + F.element_at(literal_map({f.facility_id: f.readmit_logit_effect for f in FACILITIES}), F.col("facility_id"))
+        + m.medicaid * (F.col("primary_payer") == "MEDICAID").cast("int")
+        + m.winter_respiratory * (F.col("is_winter") & cond.isin("copd", "pneumonia")).cast("int")
+        + followup_effect * F.col("followup_7d_planned").cast("int")
+    )
+    raw_day = 1 + F.floor(29 * F.pow(rng.u("rd:day", k), 1.6))
+    offset = F.col("followup_offset_days")
+    # A completed follow-up happens before any readmission it fails to prevent.
+    readmit_day = F.when(
+        F.col("followup_7d_planned") & (raw_day <= offset),
+        offset + 1 + F.floor(rng.u("rd:day2", k) * (29 - offset)),
+    ).otherwise(raw_day).cast("int")
+    return (
+        df.withColumn("readmit_prob", F.when(F.col("discharge_disposition") == "HOSPICE", 0.0).otherwise(sigmoid(logit)))
+        .withColumn("planned_readmit", rng.u("rd:yes", k) < F.col("readmit_prob"))
+        .withColumn("readmit_day", F.when(F.col("planned_readmit"), readmit_day))
+        .withColumn(
+            "readmit_admit_ts",
+            F.when(
+                F.col("planned_readmit"),
+                ts_at(F.date_add(F.to_date("discharge_ts"), F.col("readmit_day")), F.floor(rng.u("rd:ah", k) * _DAY)),
+            ),
+        )
+    )
+
+
+def _readmit_inpatient(index: DataFrame, rng: HashRng) -> DataFrame:
+    k = F.col("index_encounter_number")
+    emergent_rate = literal_map(EMERGENT_RATE)
+    patient_cols = [
+        "patient_idx", "frailty", "age", "sex", "first_name", "last_name", "birth_date",
+        "home_facility_id", "primary_payer", "phone", "zip_code", "mrn", "comorbid_codes",
+    ]
+    base = index.filter("planned_readmit").select(
+        *patient_cols,
+        F.col("encounter_number").alias("index_encounter_number"),
+        F.col("facility_id").alias("index_facility_id"),
+        F.col("condition_group").alias("index_condition_group"),
+        F.to_date("discharge_ts").alias("index_discharge_date"),
+        "slot",
+        "readmit_admit_ts",
+    )
+    admit_day = F.to_date("readmit_admit_ts")
+    return (
+        base.withColumn("day", admit_day)
+        .withColumn("is_winter", F.month("day").isin(12, 1, 2))
+        .withColumn("is_summer", F.month("day").isin(6, 7, 8))
+        .withColumn(
+            "facility_id",
+            F.when(rng.u("rp:fac", k) < 0.8, F.col("index_facility_id")).otherwise(F.col("home_facility_id")),
+        )
+        .withColumn(
+            "condition_group",
+            F.when(rng.u("rp:same", k) < 0.55, F.col("index_condition_group")).otherwise(
+                weighted_choice(rng.u("rp:cond", k), _condition_weights(rng))
+            ),
+        )
+        # Readmissions arrive through the ED; LOS skews slightly longer.
+        .withColumn("emergent", F.lit(True))
+        .withColumn("los_days", _los_days(rng, "rp", k, mult=1.15))
+        .withColumn("discharge_disposition", _disposition(rng, "rp", k))
+        .withColumn("admit_ts", F.col("readmit_admit_ts"))
+        .withColumn(
+            "discharge_ts",
+            ts_at(F.date_add(admit_day, F.col("los_days")), (10 + F.floor(rng.u("rp:dh", k) * 8)) * _HOUR),
+        )
+        .withColumn(
+            "encounter_number",
+            F.concat(
+                F.lit("IP"),
+                F.date_format("index_discharge_date", "yyMMdd"),
+                F.lpad((F.col("slot") + 5000).cast("string"), 4, "0"),
+            ),
+        )
+        .withColumn("is_index", F.lit(False))
+        .withColumn("planned_readmit", F.lit(False))
+        .drop("readmit_admit_ts", "index_discharge_date", "index_facility_id", "index_condition_group")
+        .withColumn("readmit_admit_ts", F.lit(None).cast("timestamp"))
+    )
+
+
+# --------------------------------------------------------------------------------- ED
+
+
+def _ed_visits(days: DataFrame, patients: DataFrame, cfg: SimulatorConfig, rng: HashRng) -> DataFrame:
+    key = F.concat_ws("|", F.lit("ed"), F.col("day").cast("string"), F.col("slot").cast("string"))
+    weights = [
+        (g, F.lit(base) * F.exp(F.lit(z) * F.col("frailty")) * F.when(F.col("is_winter"), w).otherwise(1.0))
+        for g, (base, z, w) in ED_MIX.items()
+    ]
+    arrival_hour = F.pmod(F.lit(8) + F.floor(F.pow(rng.u("ed:hr", F.col("ekey")), 0.9) * 20), F.lit(24))
+    stay_secs = (2 * _HOUR) - F.log(rng.u("ed:stay", F.col("ekey"))) * (3 * _HOUR)
+    return (
+        _daily_slots(days, rng, "ed", cfg.ed_per_day, 1.1, 1.15)
+        .withColumn("ekey", key)
+        .withColumn("patient_idx", _pick_patient(rng, "ed", F.col("ekey"), cfg.n_patients, (0.16, 0.30)))
+        .join(patients, "patient_idx")
+        .withColumn("facility_id", _facility_for(rng, "ed", F.col("ekey"), F.col("home_facility_id"), 0.90))
+        .withColumn("condition_group", weighted_choice(rng.u("ed:grp", F.col("ekey")), weights))
+        .withColumn("admit_ts", ts_at(F.col("day"), arrival_hour * _HOUR + F.floor(rng.u("ed:min", F.col("ekey")) * 3600)))
+        .withColumn("discharge_ts", F.timestamp_seconds(F.unix_timestamp("admit_ts") + stay_secs.cast("long")))
+        .withColumn("discharge_disposition", F.lit("HOME"))
+        .withColumn(
+            "encounter_number",
+            F.concat(F.lit("ED"), F.date_format("day", "yyMMdd"), F.lpad(F.col("slot").cast("string"), 4, "0")),
+        )
+    )
+
+
+# --------------------------------------------------------------------------- records
+
+
+def _patient_records(
+    patients: DataFrame, inpatient: DataFrame, ed: DataFrame, rng: HashRng, history_start
+) -> DataFrame:
+    first_seen = (
+        inpatient.select("patient_idx", "admit_ts")
+        .unionByName(ed.select("patient_idx", "admit_ts"))
+        .groupBy("patient_idx")
+        .agg(F.min("admit_ts").alias("first_admit_ts"))
+    )
+    cols = ["mrn", "first_name", "last_name", "birth_date", "sex", "phone", "zip_code", "primary_payer"]
+    seen = patients.join(first_seen, "patient_idx")
+    idx = F.col("patient_idx")
+    # Registered 45 minutes before the first visit, or on day one of the extract
+    # history for patients whose first stay began before it.
+    window_start = F.unix_timestamp(F.lit(history_start).cast("timestamp"))
+    registered = seen.select(
+        *cols,
+        F.greatest(F.unix_timestamp("first_admit_ts") - 2700, window_start).cast("long").alias("_ts"),
+    )
+    # ~4% of patients later update their phone number (a CDC update in silver).
+    phone_change = seen.filter(rng.u("pu:yes", idx) < 0.04).select(
+        "mrn", "first_name", "last_name", "birth_date", "sex",
+        F.concat(F.lit("(555) 555-"), F.lpad(F.floor(rng.u("pu:ph", idx) * 10000).cast("string"), 4, "0")).alias("phone"),
+        "zip_code", "primary_payer",
+        (F.unix_timestamp("first_admit_ts") + (30 + F.floor(rng.u("pu:d", idx) * 400)) * _DAY).cast("long").alias("_ts"),
+    )
+    return _finalize(registered.unionByName(phone_change))
+
+
+def _encounter_records(inpatient: DataFrame, ed: DataFrame) -> DataFrame:
+    drg = literal_map(DRG_BY_CONDITION)
+    cols = [
+        "encounter_number", "mrn", "facility_id", "encounter_type", "admission_type",
+        "admit_ts", "discharge_ts", "discharge_disposition", "drg_code",
+    ]
+    ip = inpatient.withColumn("encounter_type", F.lit("INPATIENT")).withColumn(
+        "admission_type",
+        F.when(~F.col("emergent"), "ELECTIVE")
+        .when(F.pmod(F.xxhash64("encounter_number"), F.lit(7)) == 0, "URGENT")
+        .otherwise("EMERGENCY"),
+    ).withColumn("drg_code", F.element_at(drg, F.col("condition_group")))
+    admitted = ip.filter(F.to_date("discharge_ts") > F.to_date("admit_ts")).select(
+        *[F.lit(None).cast("timestamp").alias(c) if c == "discharge_ts"
+          else F.lit(None).cast("string").alias(c) if c in ("discharge_disposition", "drg_code")
+          else F.col(c) for c in cols],
+        F.unix_timestamp("admit_ts").alias("_ts"),
+    )
+    discharged = ip.select(*cols, (F.unix_timestamp("discharge_ts") + 1800).alias("_ts"))
+    ed_rows = (
+        ed.withColumn("encounter_type", F.lit("ED"))
+        .withColumn("admission_type", F.lit(None).cast("string"))
+        .withColumn("drg_code", F.lit(None).cast("string"))
+        .select(*cols, (F.unix_timestamp("discharge_ts") + 600).alias("_ts"))
+    )
+    return _finalize(admitted.unionByName(discharged).unionByName(ed_rows))
+
+
+def _diagnosis_records(inpatient: DataFrame, ed: DataFrame, rng: HashRng) -> DataFrame:
+    ip_codes = literal_map({c: F.array(*[F.lit(x) for x in v]) for c, v in CONDITION_PRIMARY_CODES.items()})
+    ed_codes = literal_map({c: F.array(*[F.lit(x) for x in v]) for c, v in ED_PRIMARY_CODES.items()})
+
+    def primary(codes: Column, salt: str) -> Column:
+        options = F.element_at(codes, F.col("condition_group"))
+        pick = F.floor(rng.u(salt, "encounter_number") * F.size(options)).cast("int") + 1
+        return F.element_at(options, pick)
+
+    def documented(p: float, salt: str) -> Column:
+        # Each chronic comorbidity is coded on a given encounter with probability p.
+        return F.filter(
+            F.transform(
+                "comorbid_codes",
+                lambda c: F.when(rng.u(salt, F.col("encounter_number"), c) < p, c),
+            ),
+            lambda c: c.isNotNull(),
+        )
+
+    common = F.filter(
+        F.array(*[F.when(rng.u("dx:common", "encounter_number", F.lit(c)) < 0.3, F.lit(c)) for c in COMMON_SECONDARY_CODES]),
+        lambda c: c.isNotNull(),
+    )
+    ip = inpatient.select(
+        "encounter_number",
+        F.array_distinct(F.concat(F.array(primary(ip_codes, "dx:ip")), documented(0.85, "dx:cm"), common)).alias("codes"),
+        (F.unix_timestamp("discharge_ts") + 2 * _HOUR).alias("_ts"),
+    )
+    ed_dx = ed.select(
+        "encounter_number",
+        F.array_distinct(F.concat(F.array(primary(ed_codes, "dx:ed")), documented(0.3, "dx:edcm"))).alias("codes"),
+        (F.unix_timestamp("discharge_ts") + 2 * _HOUR).alias("_ts"),
+    )
+    exploded = ip.unionByName(ed_dx).select(
+        "encounter_number", F.posexplode("codes").alias("pos", "icd10_code"), "_ts"
+    )
+    return _finalize(
+        exploded.select(
+            "encounter_number",
+            "icd10_code",
+            (F.col("pos") + 1).alias("dx_sequence"),
+            F.when(F.col("pos") == 0, "PRIMARY").otherwise("SECONDARY").alias("dx_type"),
+            "_ts",
+        )
+    )
+
+
+def _appointment_records(inpatient: DataFrame) -> DataFrame:
+    appts = inpatient.filter("followup_scheduled").withColumn(
+        "appointment_number", F.concat(F.lit("APT"), F.substring("encounter_number", 3, 20))
+    )
+    cols = ["appointment_number", "mrn", F.col("encounter_number").alias("source_encounter_number"),
+            "scheduled_ts", "provider_type"]
+    scheduled = appts.select(*cols, F.lit("SCHEDULED").alias("status"),
+                             (F.unix_timestamp("discharge_ts") + 3 * _HOUR).alias("_ts"))
+    cancelled_by_readmit = F.col("readmit_admit_ts").isNotNull() & (F.col("readmit_admit_ts") < F.col("scheduled_ts"))
+    final = appts.select(
+        *cols,
+        F.when(cancelled_by_readmit, "CANCELLED")
+        .when(F.col("followup_completes"), "COMPLETED")
+        .otherwise("NO_SHOW")
+        .alias("status"),
+        F.when(cancelled_by_readmit, F.unix_timestamp("readmit_admit_ts") + 900)
+        .otherwise(F.unix_timestamp("scheduled_ts") + _HOUR)
+        .alias("_ts"),
+    )
+    return _finalize(scheduled.unionByName(final))
+
+
+def _finalize(df: DataFrame) -> DataFrame:
+    ts = F.timestamp_seconds(F.col("_ts"))
+    return df.withColumn("record_updated_ts", ts).withColumn("extract_date", F.to_date(ts)).drop("_ts")
+
+
+# -------------------------------------------------------------------------- bad rows
+
+
+def _inject_bad_rows(entity: str, df: DataFrame, cfg: SimulatorConfig, rng: HashRng) -> DataFrame:
+    """Append mutated copies of a small share of rows; the clean rows stay intact.
+
+    Covers what bronze expectations must quarantine (nulls, impossible dates,
+    malformed codes) and what silver must de-duplicate (re-sent records).
+    """
+    key = F.xxhash64(*df.columns)
+    r = cfg.bad_row_rate
+    u = rng.u(f"bad:{entity}", key)
+    dupes = df.filter(u < r * 0.5)
+    if entity == "encounter":
+        broken = df.filter((u >= r * 0.5) & (u < r * 0.8)).withColumn("mrn", F.lit(None).cast("string"))
+        bad_dates = df.filter((u >= r * 0.8) & (u < r) & F.col("discharge_ts").isNotNull()).withColumn(
+            "discharge_ts", F.col("admit_ts") - F.expr("INTERVAL 1 DAY")
+        )
+        broken = broken.unionByName(bad_dates)
+    elif entity == "diagnosis":
+        broken = df.filter((u >= r * 0.5) & (u < r)).withColumn(
+            "icd10_code", F.concat(F.substring("icd10_code", 1, 2), F.lit("#X"))
+        )
+    elif entity == "patient":
+        broken = df.filter((u >= r * 0.5) & (u < r)).withColumn("birth_date", F.lit("2099-01-01").cast("date"))
+    else:
+        broken = df.filter((u >= r * 0.5) & (u < r)).withColumn("scheduled_ts", F.lit(None).cast("timestamp"))
+    return df.unionByName(dupes).unionByName(broken)

@@ -2,7 +2,7 @@
 
 A reference solution on Databricks that helps a hospital care management team cut avoidable 30-day readmissions. Every morning it scores yesterday's discharges for readmission risk, routes high-risk patients to the right care manager with a plain-language outreach brief, captures each outreach call, and measures whether the program is actually moving readmission rates.
 
-> **Status:** design phase. The high-level design is complete (see [`docs/`](docs/)); implementation is in progress. Sections marked *(planned)* describe the target state.
+> **Status:** Phase 1 of 7 complete (bundle skeleton, schemas and volume, synthetic EHR source simulator). The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
 >
 > All data is **synthetic**. No real patient or customer data is used anywhere in this repository.
 
@@ -112,11 +112,12 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | Unity Catalog catalog | Must **not** use default storage (a Lakebase CDF requirement). Dev uses `rtr_demo_catalog` |
 | Databricks CLI | v0.294.0 or later (`databricks postgres` command group) |
 | Python | 3.11+ with `databricks-sdk` 0.81.0 or later (pipeline, ML, setup) |
+| uv | 0.9+; builds the `readmit` wheel during `bundle deploy` and runs local tests |
 | Node.js | Current LTS, for the AppKit app |
 | Foundation Model endpoint | Any pay-per-token chat model; set through the `llm_endpoint` bundle variable |
 | Permissions | CREATE CATALOG (or an existing catalog), CAN MANAGE on the Lakebase project, workspace admin for preview enablement |
 
-## Deploy and run *(planned)*
+## Deploy and run *(steps 1, 2, and 4 work today; the rest are planned)*
 
 ```bash
 # 1. Authenticate
@@ -142,22 +143,55 @@ databricks bundle run readmit_daily_cycle -t dev --profile <profile>
 databricks bundle run readmission_worklist_app -t dev --profile <profile>
 ```
 
-## Repository structure *(planned)*
+## Repository structure
 
 ```
 readmission-risk-worklist/
-├── databricks.yml              # Bundle definition, variables, dev/prod targets
-├── resources/                  # Bundle resources: pipeline, jobs, app, schemas, volume
+├── databricks.yml              # Bundle definition, variables, dev/prod targets, wheel artifact
+├── pyproject.toml              # readmit wheel (job code) and its entry points
+├── resources/                  # Bundle resources, one per file: <name>.<type>.yml
+│   ├── *.schema.yml            # The seven UC schemas
+│   ├── ehr_landing.volume.yml  # ehr_raw.ehr_landing
+│   └── readmit_source_simulator.job.yml
 ├── src/
-│   ├── simulator/              # Synthetic EHR extract generator
-│   ├── pipeline/               # Lakeflow SDP: bronze, silver, gold
-│   ├── ml/                     # Training, champion/challenger promotion, batch scoring
-│   ├── worklist/               # Worklist build, ai_query briefs, synced table refresh
-│   ├── setup/                  # Lakebase synced table, CDF feed, Genie Agent, ABAC policies
-│   └── app/                    # Databricks App, AppKit (Worklist, Program, Program Settings tabs)
-├── seeds/                      # facility, risk_tier_policy, care_team_assignment
-├── evidence/                   # Committed run output: notebook outputs, logs, query results
-└── docs/                       # High-level design (PDF and HTML source)
+│   ├── readmit/                # Python package shipped as one wheel
+│   │   ├── common/             # Environment guardrail, Spark session, clinical code tables
+│   │   └── simulator/          # Synthetic EHR extract generator (entry point: simulate)
+│   ├── pipeline/               # (planned) Lakeflow SDP: bronze, silver, gold
+│   └── app/                    # (planned) Databricks App, AppKit
+├── seeds/                      # facility (risk_tier_policy, care_team_assignment planned)
+├── tests/                      # Local unit tests (pytest)
+├── evidence/                   # Committed run output: job logs, query results
+└── docs/                       # High-level design (PDF and HTML source), decision log
+```
+
+ML training, scoring, worklist build, and setup code will be added as `readmit` subpackages.
+
+## Synthetic EHR source simulator
+
+`<env>_readmit_source_simulator` (demo only) lands daily EHR extracts as JSON lines:
+
+```
+/Volumes/<catalog>/ehr_raw/ehr_landing/
+├── patient/extract_date=YYYY-MM-DD/      mrn, demographics, primary_payer
+├── encounter/extract_date=YYYY-MM-DD/    inpatient (at admit, again at discharge) and ED visits
+├── diagnosis/extract_date=YYYY-MM-DD/    ICD-10 codes per encounter, at discharge
+├── appointment/extract_date=YYYY-MM-DD/  follow-ups: SCHEDULED, then COMPLETED / NO_SHOW / CANCELLED
+└── _manifests/run_<id>.json              dates landed by each run, with row counts
+```
+
+- **Story:** about 16% system-wide 30-day readmissions. Riverbend Community (rural) completes about 29% of 7-day follow-ups versus 48-55% elsewhere and readmits about 21%. Heart failure patients without a 7-day follow-up readmit at about 27%, versus about 15% with one. COPD and pneumonia readmissions rise in winter. Current numbers are in [`evidence/phase1/`](evidence/phase1/).
+- **Source shape:** natural keys only (`mrn`, `encounter_number`, `appointment_number`); every record carries `record_updated_ts` for change sequencing. About 0.5% of rows are deliberately bad (null keys, impossible dates, malformed codes, re-sent duplicates) for the bronze expectations to quarantine.
+- **Idempotent:** every random draw is a hash of a fixed seed and the row key, so a given date always produces the same records. Each run lands only dates not yet listed in a manifest, and removes partial folders left by an interrupted run first. The first run backfills from `history_start`; later runs land only the new days.
+
+Local development (serverless Databricks Connect, nothing is landed with `--dry-run`):
+
+```bash
+uv run --no-project --python 3.12 --with pytest --with "pyspark>=3.5,<4.1" --with databricks-sdk python -m pytest -q
+
+DATABRICKS_CONFIG_PROFILE=<profile> PYTHONPATH=src uv run --no-project --python 3.12 \
+  --with "databricks-connect>=17.0,<17.4" --with "databricks-sdk>=0.81.0" \
+  python -m readmit.simulator.main --env dev --catalog rtr_demo_catalog --history-start 2024-11-01 --dry-run
 ```
 
 ## Configuration *(planned)*
@@ -173,6 +207,9 @@ Bundle variables in `databricks.yml`:
 | `llm_endpoint` | Foundation Model endpoint used by `ai_query` | your workspace's pay-per-token chat endpoint |
 | `warehouse_id` | SQL warehouse for the app and Genie | lookup by name |
 | `avg_readmission_cost` | Cost assumption used by the metric view for cost avoided | `15000` |
+| `service_principal_id` | Service principal that runs prod workloads (`run_as`) | application ID |
+
+Simulator job parameters: `history_start` (default `2024-11-01`) and `run_date` (empty means yesterday, UTC).
 
 ## Built with AI
 
