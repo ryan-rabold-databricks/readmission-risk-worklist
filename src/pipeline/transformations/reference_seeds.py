@@ -16,7 +16,6 @@ from readmit.pipeline.seeds import read_seed
 from readmit.pipeline.settings import load_settings
 
 settings = load_settings(spark)  # noqa: F821
-c = settings.catalog
 
 
 def _audit(seed: str):
@@ -61,8 +60,7 @@ def risk_tier_policy():
         "assignment_id STRING NOT NULL, care_manager_email STRING NOT NULL, facility_id STRING NOT NULL, "
         "daily_capacity INT NOT NULL, effective_date DATE NOT NULL, expiration_date DATE, "
         f"{AUDIT_SCHEMA}, "
-        "CONSTRAINT care_team_assignment_pk PRIMARY KEY (assignment_id), "
-        f"CONSTRAINT care_team_assignment_facility_fk FOREIGN KEY (facility_id) REFERENCES {c}.clinical_silver.facility (facility_id)"
+        "CONSTRAINT care_team_assignment_pk PRIMARY KEY (assignment_id)"
     ),
 )
 @dp.expect_all_or_fail({"capacity_positive": "daily_capacity > 0"})

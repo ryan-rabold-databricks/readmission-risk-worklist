@@ -8,7 +8,6 @@ from readmit.pipeline.keys import hash_key
 from readmit.pipeline.settings import load_settings
 
 settings = load_settings(spark)  # noqa: F821
-c = settings.catalog
 
 register_scd1_table(
     spark,  # noqa: F821
@@ -27,8 +26,7 @@ register_scd1_table(
     schema=(
         "diagnosis_id STRING NOT NULL, encounter_id STRING NOT NULL, icd10_code STRING NOT NULL, "
         "dx_sequence INT NOT NULL, is_primary BOOLEAN NOT NULL, condition_group STRING, "
-        "CONSTRAINT diagnosis_pk PRIMARY KEY (diagnosis_id), "
-        f"CONSTRAINT diagnosis_encounter_fk FOREIGN KEY (encounter_id) REFERENCES {c}.clinical_silver.encounter (encounter_id)"
+        "CONSTRAINT diagnosis_pk PRIMARY KEY (diagnosis_id)"
     ),
     comment="ICD-10 diagnoses per encounter. PK = SHA-256(encounter_number, icd10_code, dx_sequence).",
     cluster_by=["encounter_id"],

@@ -11,7 +11,6 @@ from readmit.pipeline.keys import hash_key
 from readmit.pipeline.settings import load_settings
 
 settings = load_settings(spark)  # noqa: F821
-c = settings.catalog
 
 register_scd1_table(
     spark,  # noqa: F821
@@ -35,9 +34,7 @@ register_scd1_table(
         "facility_id STRING NOT NULL, encounter_type STRING NOT NULL, admission_type STRING, "
         "admit_ts TIMESTAMP NOT NULL, discharge_ts TIMESTAMP, discharge_disposition STRING, "
         "drg_code STRING, length_of_stay_days INT, "
-        "CONSTRAINT encounter_pk PRIMARY KEY (encounter_id), "
-        f"CONSTRAINT encounter_patient_fk FOREIGN KEY (patient_id) REFERENCES {c}.clinical_silver.patient (patient_id), "
-        f"CONSTRAINT encounter_facility_fk FOREIGN KEY (facility_id) REFERENCES {c}.clinical_silver.facility (facility_id)"
+        "CONSTRAINT encounter_pk PRIMARY KEY (encounter_id)"
     ),
     comment="Latest state of each EHR encounter. PK encounter_id = SHA-256(encounter_number).",
     cluster_by=["patient_id"],

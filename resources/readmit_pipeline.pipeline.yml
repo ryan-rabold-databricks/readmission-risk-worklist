@@ -11,14 +11,14 @@ resources:
       serverless: true
       continuous: false
       channel: CURRENT
-      root_path: ../src/pipeline
+      # root_path is on sys.path when pipeline sources run, so they import the readmit
+      # package (rules, schemas, code tables) straight from the deployed bundle files.
+      # A wheel dependency is not used: the bundle does not rewrite pipeline dependency
+      # paths to the per-deploy dynamic wheel version, so the pipeline would run stale code.
+      root_path: ../src
       libraries:
         - glob:
             include: ../src/pipeline/transformations/**
-      environment:
-        dependencies:
-          # Installs the readmit package (rules, schemas, code tables) from the bundle files.
-          - --editable ${workspace.file_path}
       configuration:
         readmit.env: ${var.env}
         readmit.catalog: ${var.catalog}

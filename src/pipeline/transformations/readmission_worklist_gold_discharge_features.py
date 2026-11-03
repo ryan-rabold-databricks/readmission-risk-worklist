@@ -17,7 +17,6 @@ from readmit.pipeline.clinical_exprs import charlson_flag_aggs, charlson_index
 from readmit.pipeline.settings import load_settings
 
 settings = load_settings(spark)  # noqa: F821
-c = settings.catalog
 
 LOOKBACK_ED_DAYS = 182
 LOOKBACK_INPATIENT_DAYS = 365
@@ -40,13 +39,10 @@ def _days(n: int):
         "encounter_id STRING NOT NULL, patient_id STRING NOT NULL, facility_id STRING NOT NULL, "
         "discharge_date DATE NOT NULL, age_at_discharge INT NOT NULL, length_of_stay_days INT NOT NULL, "
         "emergent_admission BOOLEAN NOT NULL, charlson_index INT NOT NULL, ed_visits_6m INT NOT NULL, "
-        "inpatient_admits_12m INT NOT NULL, primary_condition_group STRING, discharge_disposition STRING, "
+        "inpatient_admits_12m INT NOT NULL, primary_condition_group STRING NOT NULL, discharge_disposition STRING, "
         "followup_scheduled_7d BOOLEAN NOT NULL, followup_within_7d BOOLEAN NOT NULL, "
         f"readmit_30d BOOLEAN, label_matured_at TIMESTAMP, {AUDIT_SCHEMA}, "
-        "CONSTRAINT discharge_features_pk PRIMARY KEY (encounter_id), "
-        f"CONSTRAINT discharge_features_encounter_fk FOREIGN KEY (encounter_id) REFERENCES {c}.clinical_silver.encounter (encounter_id), "
-        f"CONSTRAINT discharge_features_patient_fk FOREIGN KEY (patient_id) REFERENCES {c}.clinical_silver.patient (patient_id), "
-        f"CONSTRAINT discharge_features_facility_fk FOREIGN KEY (facility_id) REFERENCES {c}.clinical_silver.facility (facility_id)"
+        "CONSTRAINT discharge_features_pk PRIMARY KEY (encounter_id)"
     ),
     cluster_by=["facility_id", "discharge_date"],
 )
@@ -166,7 +162,8 @@ def discharge_features():
             F.coalesce("charlson_index", F.lit(0)).alias("charlson_index"),
             F.coalesce("ed_visits_6m", F.lit(0)).cast("int").alias("ed_visits_6m"),
             F.coalesce("inpatient_admits_12m", F.lit(0)).cast("int").alias("inpatient_admits_12m"),
-            "primary_condition_group",
+            # Primary diagnoses outside the mapped condition groups count as "other".
+            F.coalesce("primary_condition_group", F.lit("other")).alias("primary_condition_group"),
             "discharge_disposition",
             F.coalesce("followup_scheduled_7d", F.lit(False)).alias("followup_scheduled_7d"),
             F.coalesce("followup_within_7d", F.lit(False)).alias("followup_within_7d"),

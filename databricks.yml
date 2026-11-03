@@ -21,6 +21,9 @@ artifacts:
     type: whl
     build: uv build --wheel
     path: .
+    # Unique wheel version per deploy, so serverless jobs and pipelines never reuse a
+    # cached install of an older build with the same version.
+    dynamic_version: true
 
 variables:
   env:

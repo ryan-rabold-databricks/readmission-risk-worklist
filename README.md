@@ -2,7 +2,7 @@
 
 A reference solution on Databricks that helps a hospital care management team cut avoidable 30-day readmissions. Every morning it scores yesterday's discharges for readmission risk, routes high-risk patients to the right care manager with a plain-language outreach brief, captures each outreach call, and measures whether the program is actually moving readmission rates.
 
-> **Status:** Phase 1 of 7 complete (bundle skeleton, schemas and volume, synthetic EHR source simulator). The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
+> **Status:** Phase 2 of 7 complete (bundle skeleton, synthetic EHR source simulator, Lakeflow SDP pipeline from bronze to gold features and labels). The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
 >
 > All data is **synthetic**. No real patient or customer data is used anywhere in this repository.
 
@@ -117,7 +117,7 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | Foundation Model endpoint | Any pay-per-token chat model; set through the `llm_endpoint` bundle variable |
 | Permissions | CREATE CATALOG (or an existing catalog), CAN MANAGE on the Lakebase project, workspace admin for preview enablement |
 
-## Deploy and run *(steps 1, 2, and 4 work today; the rest are planned)*
+## Deploy and run *(steps 1, 2, 4, and 4a work today; the rest are planned)*
 
 ```bash
 # 1. Authenticate
@@ -132,6 +132,10 @@ databricks bundle run readmit_setup -t dev --profile <profile>
 
 # 4. Generate synthetic history and today's extract
 databricks bundle run readmit_source_simulator -t dev --profile <profile>
+
+# 4a. Ingest and curate: ehr_bronze -> silver -> readmission_worklist_gold.discharge_features
+#     (runs as the ingest_curate task of the daily cycle once that job exists in Phase 3)
+databricks bundle run readmit_pipeline -t dev --profile <profile>
 
 # 5. Train the first model and set @champion
 databricks bundle run readmit_model_training -t dev --profile <profile>
@@ -152,14 +156,16 @@ readmission-risk-worklist/
 ├── resources/                  # Bundle resources, one per file: <name>.<type>.yml
 │   ├── *.schema.yml            # The seven UC schemas
 │   ├── ehr_landing.volume.yml  # ehr_raw.ehr_landing
+│   ├── readmit_pipeline.pipeline.yml
 │   └── readmit_source_simulator.job.yml
 ├── src/
 │   ├── readmit/                # Python package shipped as one wheel
 │   │   ├── common/             # Environment guardrail, Spark session, clinical code tables
+│   │   ├── pipeline/           # Pipeline helpers: DQ rules, source schemas, audit columns, CDC
 │   │   └── simulator/          # Synthetic EHR extract generator (entry point: simulate)
-│   ├── pipeline/               # (planned) Lakeflow SDP: bronze, silver, gold
+│   ├── pipeline/transformations/  # Lakeflow SDP sources, one file per dataset or entity
 │   └── app/                    # (planned) Databricks App, AppKit
-├── seeds/                      # facility (risk_tier_policy, care_team_assignment planned)
+├── seeds/                      # facility, risk_tier_policy, care_team_assignment
 ├── tests/                      # Local unit tests (pytest)
 ├── evidence/                   # Committed run output: job logs, query results
 └── docs/                       # High-level design (PDF and HTML source), decision log
@@ -167,13 +173,33 @@ readmission-risk-worklist/
 
 ML training, scoring, worklist build, and setup code will be added as `readmit` subpackages.
 
+## Ingest and curate pipeline
+
+`<env>_readmit_pipeline` (serverless Lakeflow Spark Declarative Pipeline, Python):
+
+| Layer | Datasets | How |
+|---|---|---|
+| Bronze | `ehr_bronze.{patient,encounter,diagnosis,appointment}_raw` | Auto Loader (JSON lines, explicit schema, `_rescued_data`), append-only with source file and ingest time |
+| Quarantine | `ehr_bronze.quarantine_raw` | Rows failing any data-quality rule, with the failed rule names and the original record as JSON |
+| Silver | `clinical_silver.{patient,encounter,diagnosis,follow_up_appointment}` | AUTO CDC SCD Type 1 on valid rows, sequenced by `record_updated_ts`; SHA-256 surrogate keys of the natural keys |
+| Reference | `clinical_silver.facility`, `care_management_silver.{risk_tier_policy,care_team_assignment}` | Materialized views over `seeds/*.csv` |
+| Gold | `readmission_worklist_gold.discharge_features` | Materialized view: LACE-style features known at scoring time, `followup_within_7d` outcome, `readmit_30d` label with `label_matured_at` |
+
+- **One rule set, two uses:** the rules in `readmit.pipeline.quality_rules` run as warn-only expectations on bronze (pass/fail counts in the event log) and route failing rows to quarantine, so the two cannot disagree.
+- **No leakage:** model inputs use only what is known the morning after discharge. A booked follow-up (`followup_scheduled_7d`) is an input; attendance (`followup_within_7d`) is an outcome only.
+- **Label:** a non-elective inpatient admission within 30 days of discharge, hospice excluded, NULL until the 30-day window has passed in the data.
+- **Audit columns** on every silver and gold table: see `readmit.pipeline.audit` and `docs/DECISIONS.md` #22.
+- Run evidence: [`evidence/phase2/`](evidence/phase2/).
+
+Outreach, program settings, and app audit tables (`care_management_silver.outreach_activity`, `program_setting`, `app_audit_event`) and `readmission_outcome` are added in Phases 3-5, when their sources exist.
+
 ## Synthetic EHR source simulator
 
 `<env>_readmit_source_simulator` (demo only) lands daily EHR extracts as JSON lines:
 
 ```
 /Volumes/<catalog>/ehr_raw/ehr_landing/
-├── patient/extract_date=YYYY-MM-DD/      mrn, demographics, primary_payer
+├── patient/extract_date=YYYY-MM-DD/      mrn, demographics, primary_payer (every record: record_created_ts, record_updated_ts)
 ├── encounter/extract_date=YYYY-MM-DD/    inpatient (at admit, again at discharge) and ED visits
 ├── diagnosis/extract_date=YYYY-MM-DD/    ICD-10 codes per encounter, at discharge
 ├── appointment/extract_date=YYYY-MM-DD/  follow-ups: SCHEDULED, then COMPLETED / NO_SHOW / CANCELLED
