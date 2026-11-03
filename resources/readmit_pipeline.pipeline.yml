@@ -1,0 +1,27 @@
+# Lakeflow Spark Declarative Pipeline: ehr_bronze -> clinical_silver /
+# care_management_silver -> readmission_worklist_gold. Runs as the ingest_curate task of
+# <env>_readmit_daily_cycle once that job exists (Phase 3).
+
+resources:
+  pipelines:
+    readmit_pipeline:
+      name: ${var.env}_readmit_pipeline
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.ehr_bronze.name}
+      serverless: true
+      continuous: false
+      channel: CURRENT
+      root_path: ../src/pipeline
+      libraries:
+        - glob:
+            include: ../src/pipeline/transformations/**
+      environment:
+        dependencies:
+          # Installs the readmit package (rules, schemas, code tables) from the bundle files.
+          - --editable ${workspace.file_path}
+      configuration:
+        readmit.env: ${var.env}
+        readmit.catalog: ${var.catalog}
+        readmit.pipeline_name: ${var.env}_readmit_pipeline
+        readmit.landing_path: /Volumes/${var.catalog}/ehr_raw/ehr_landing
+        readmit.seeds_path: ${workspace.file_path}/seeds

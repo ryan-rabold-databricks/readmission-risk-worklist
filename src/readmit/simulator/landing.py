@@ -28,15 +28,14 @@ class VolumeLanding:
         self.ws = ws
         self.root = root.rstrip("/")
 
-    def landed_dates(self) -> set[date]:
-        landed: set[date] = set()
+    def manifests(self) -> list[dict]:
+        found = []
         for entry in self._list(f"{self.root}/{MANIFEST_DIR}"):
             if entry.is_directory or not entry.name.endswith(".json"):
                 continue
             with self.ws.files.download(entry.path).contents as fh:
-                manifest = json.load(fh)
-            landed.update(date.fromisoformat(d) for d in manifest["extract_dates"])
-        return landed
+                found.append(json.load(fh))
+        return found
 
     def remove_unmanifested(self, entities: tuple[str, ...], landed: set[date]) -> list[str]:
         """Delete date folders not covered by any manifest; return what was removed."""
@@ -76,3 +75,18 @@ class VolumeLanding:
             else:
                 self.ws.files.delete(entry.path)
         self.ws.files.delete_directory(directory)
+
+
+def landed_dates(manifests: list[dict]) -> set[date]:
+    return {date.fromisoformat(d) for m in manifests for d in m["extract_dates"]}
+
+
+def assert_single_generator_version(manifests: list[dict], current: str) -> None:
+    """Refuse to mix extract schemas from different generator versions in one volume."""
+    other = sorted({str(m.get("generator_version")) for m in manifests} - {current})
+    if other:
+        raise RuntimeError(
+            f"Landing zone holds extracts from generator version(s) {other}; this run is "
+            f"version {current}. Clear the landing volume (and reset downstream pipeline "
+            "state) before re-landing with the new version."
+        )

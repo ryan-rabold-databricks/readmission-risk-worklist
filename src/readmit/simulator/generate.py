@@ -8,8 +8,9 @@ silver hashes them into surrogate keys):
 - diagnosis:   encounter_number, icd10_code, dx_sequence, dx_type
 - appointment: appointment_number, mrn, source_encounter_number, scheduled_ts, status
 
-Every record carries ``record_updated_ts`` (the CDC sequence column) and lands in the
-extract for ``extract_date = to_date(record_updated_ts)``. Inpatient encounters land
+Every record carries ``record_created_ts`` (when the source record was first created,
+constant across versions) and ``record_updated_ts`` (the CDC sequence column), and
+lands in the extract for ``extract_date = to_date(record_updated_ts)``. Inpatient encounters land
 once at admission (no discharge yet) and again at discharge; appointments land when
 scheduled and again with their final status, so silver must apply changes in order.
 """
@@ -20,6 +21,7 @@ from dataclasses import dataclass
 
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 from readmit.common.clinical_codes import (
     CHARLSON_CATEGORIES,
@@ -43,6 +45,14 @@ from readmit.simulator.config import (
 from readmit.simulator.random_exprs import HashRng, literal_map, sigmoid, ts_at, weighted_choice
 
 ENTITIES = ("patient", "encounter", "diagnosis", "appointment")
+
+# Natural key of each source entity.
+ENTITY_KEYS: dict[str, tuple[str, ...]] = {
+    "patient": ("mrn",),
+    "encounter": ("encounter_number",),
+    "diagnosis": ("encounter_number", "icd10_code", "dx_sequence"),
+    "appointment": ("appointment_number",),
+}
 
 _HOUR = 3600
 _DAY = 86400
@@ -469,7 +479,7 @@ def _patient_records(
         "zip_code", "primary_payer",
         (F.unix_timestamp("first_admit_ts") + (30 + F.floor(rng.u("pu:d", idx) * 400)) * _DAY).cast("long").alias("_ts"),
     )
-    return _finalize(registered.unionByName(phone_change))
+    return _finalize(registered.unionByName(phone_change), "patient")
 
 
 def _encounter_records(inpatient: DataFrame, ed: DataFrame) -> DataFrame:
@@ -497,7 +507,7 @@ def _encounter_records(inpatient: DataFrame, ed: DataFrame) -> DataFrame:
         .withColumn("drg_code", F.lit(None).cast("string"))
         .select(*cols, (F.unix_timestamp("discharge_ts") + 600).alias("_ts"))
     )
-    return _finalize(admitted.unionByName(discharged).unionByName(ed_rows))
+    return _finalize(admitted.unionByName(discharged).unionByName(ed_rows), "encounter")
 
 
 def _diagnosis_records(inpatient: DataFrame, ed: DataFrame, rng: HashRng) -> DataFrame:
@@ -543,7 +553,8 @@ def _diagnosis_records(inpatient: DataFrame, ed: DataFrame, rng: HashRng) -> Dat
             (F.col("pos") + 1).alias("dx_sequence"),
             F.when(F.col("pos") == 0, "PRIMARY").otherwise("SECONDARY").alias("dx_type"),
             "_ts",
-        )
+        ),
+        "diagnosis",
     )
 
 
@@ -566,12 +577,18 @@ def _appointment_records(inpatient: DataFrame) -> DataFrame:
         .otherwise(F.unix_timestamp("scheduled_ts") + _HOUR)
         .alias("_ts"),
     )
-    return _finalize(scheduled.unionByName(final))
+    return _finalize(scheduled.unionByName(final), "appointment")
 
 
-def _finalize(df: DataFrame) -> DataFrame:
+def _finalize(df: DataFrame, entity: str) -> DataFrame:
+    first_version = F.min("_ts").over(Window.partitionBy(*ENTITY_KEYS[entity]))
     ts = F.timestamp_seconds(F.col("_ts"))
-    return df.withColumn("record_updated_ts", ts).withColumn("extract_date", F.to_date(ts)).drop("_ts")
+    return (
+        df.withColumn("record_created_ts", F.timestamp_seconds(first_version))
+        .withColumn("record_updated_ts", ts)
+        .withColumn("extract_date", F.to_date(ts))
+        .drop("_ts")
+    )
 
 
 # -------------------------------------------------------------------------- bad rows

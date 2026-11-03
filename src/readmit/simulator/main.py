@@ -20,7 +20,8 @@ from readmit.simulator.config import SimulatorConfig
 from readmit.simulator.generate import ENTITIES, build_universe
 from readmit.simulator.summary import extract_counts, story_report
 
-GENERATOR_VERSION = "1"
+# Bump when the extract schema or generation logic changes; see assert_single_generator_version.
+GENERATOR_VERSION = "2"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -64,10 +65,12 @@ def main(argv: list[str] | None = None) -> None:
 
     from databricks.sdk import WorkspaceClient
 
-    from readmit.simulator.landing import VolumeLanding
+    from readmit.simulator.landing import VolumeLanding, assert_single_generator_version, landed_dates
 
     landing = VolumeLanding(WorkspaceClient(), volume_root)
-    landed = landing.landed_dates()
+    manifests = landing.manifests()
+    assert_single_generator_version(manifests, GENERATOR_VERSION)
+    landed = landed_dates(manifests)
     targets = missing_dates(cfg.history_start, cfg.run_date, landed)
     if not targets:
         print(f"All extract dates through {cfg.run_date} are already landed; nothing to do.")

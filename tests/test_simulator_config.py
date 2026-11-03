@@ -71,3 +71,14 @@ def test_missing_dates_skips_landed_and_fills_gaps():
 def test_config_rejects_run_date_before_history():
     with pytest.raises(ValueError):
         SimulatorConfig(history_start=date(2026, 1, 2), run_date=date(2026, 1, 1))
+
+
+def test_generator_version_guard_rejects_mixed_versions():
+    from readmit.simulator.landing import assert_single_generator_version, landed_dates
+
+    manifests = [{"generator_version": "1", "extract_dates": ["2026-01-01"]}]
+    assert landed_dates(manifests) == {date(2026, 1, 1)}
+    assert_single_generator_version([], "2")
+    assert_single_generator_version([{"generator_version": "2", "extract_dates": []}], "2")
+    with pytest.raises(RuntimeError, match="generator version"):
+        assert_single_generator_version(manifests, "2")
