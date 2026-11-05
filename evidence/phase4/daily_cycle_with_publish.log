@@ -1,0 +1,40 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/773178160265376/runs/923026863566751?o=7474647046080636
+
+2026-11-05 17:59:58 "dev_readmit_daily_cycle" RUNNING
+2026-11-05 18:04:37 "dev_readmit_daily_cycle" TERMINATED SUCCESS
+Output:
+=======
+Task score_discharges:
+{"ts": "2026-11-05 23:02:10.099", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cilqb2JzLzc3MzE3ODE2MDI2NTM3Ni9ydW5zLzkyMzAyNjg2MzU2Njc1MRABIAEqJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMTIkMDFhMWFkZjItMzA0MC03MWQwLTg1MjktOTI5Y2JiNWNmY2EwOiRkYjE0Zjc4Mi04MDg2LTNjYzQtYmM4ZS02MDQ5Mjk3ZmMyMzZCJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMUoMCMyVtNcGEICw/psDUAJYAWABaPyQg5DuxKMNiAEA.", "context": {}}
+{"ts": "2026-11-05 23:02:10.099", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cilqb2JzLzc3MzE3ODE2MDI2NTM3Ni9ydW5zLzkyMzAyNjg2MzU2Njc1MRABIAEqJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMTIkMDFhMWFkZjItMzA0MC03MWQwLTg1MjktOTI5Y2JiNWNmY2EwOiRkYjE0Zjc4Mi04MDg2LTNjYzQtYmM4ZS02MDQ5Mjk3ZmMyMzZCJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMUoMCMyVtNcGEICw/psDUAJYAWABaPyQg5DuxKMNiAEA.", "context": {}}
+{"ts": "2026-11-05 23:02:10.099", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cilqb2JzLzc3MzE3ODE2MDI2NTM3Ni9ydW5zLzkyMzAyNjg2MzU2Njc1MRABIAEqJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMTIkMDFhMWFkZjItMzA0MC03MWQwLTg1MjktOTI5Y2JiNWNmY2EwOiRkYjE0Zjc4Mi04MDg2LTNjYzQtYmM4ZS02MDQ5Mjk3ZmMyMzZCJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMUoMCMyVtNcGEICw/psDUAJYAWABaPyQg5DuxKMNiAEA.", "context": {}}
+
+
+All worklist days are already scored; nothing to do.
+
+=======
+Task build_worklist:
+{'briefs_requested': 0}
+
+=======
+Task publish_worklist:
+{
+  "run_date": "2026-11-05",
+  "tables": {
+    "care_worklist_synced": {
+      "pipeline_id": "662bda51-13fe-4ea7-a92b-9552e6b33cc6",
+      "update_id": "cfe40550-e6de-4b58-9313-15e960e3f2d3",
+      "state": "COMPLETED",
+      "uc_rows": 46,
+      "pg_rows": 46
+    },
+    "care_team_roster_synced": {
+      "pipeline_id": "0d441e38-cce0-492b-997d-a5a1bc1dcaae",
+      "update_id": "99498415-1489-42d6-9db3-19104a7689d4",
+      "state": "COMPLETED",
+      "uc_rows": 5,
+      "pg_rows": 5
+    }
+  }
+}
+

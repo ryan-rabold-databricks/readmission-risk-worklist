@@ -63,3 +63,13 @@ def test_cutoff_drops_future_activities_and_reruns_extend():
     late = plan_activities(items, T0 + timedelta(days=5))
     assert all(x["activity_ts"] < T0 + timedelta(hours=6) for x in early)
     assert {x["client_request_id"] for x in early} < {x["client_request_id"] for x in late}
+
+
+def test_publish_state_check_handles_both_pipeline_enums():
+    from databricks.sdk.service.pipelines import UpdateInfoState, UpdateStateInfoState
+
+    from readmit.lakebase.publish import FINAL, _state
+
+    assert _state(UpdateInfoState.COMPLETED) in FINAL
+    assert _state(UpdateStateInfoState.COMPLETED) in FINAL
+    assert _state(UpdateStateInfoState.RUNNING) not in FINAL

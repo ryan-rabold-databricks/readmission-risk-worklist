@@ -1,0 +1,18 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/159512900865467/runs/514914965089061?o=7474647046080636
+
+2026-11-05 17:44:00 "dev_readmit_setup" QUEUED
+2026-11-05 17:44:30 "dev_readmit_setup" RUNNING
+2026-11-05 17:45:09 "dev_readmit_setup" TERMINATED SUCCESS
+{
+  "database": "projects/readmission-worklist/branches/production/databases/readmission-worklist",
+  "replica_identity": {
+    "outreach_activity": "full",
+    "program_setting_change": "full"
+  },
+  "cdf_config": {
+    "name": "projects/readmission-worklist/branches/production/databases/readmission-worklist/cdf-configs/readmission_worklist_app",
+    "postgres_schema": "readmission_worklist_app",
+    "destination": "rtr_demo_catalog.readmission_worklist_app_bronze"
+  },
+  "cdf_statuses": []
+}

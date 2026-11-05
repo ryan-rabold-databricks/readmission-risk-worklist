@@ -2,7 +2,7 @@
 
 A reference solution on Databricks that helps a hospital care management team cut avoidable 30-day readmissions. Every morning it scores yesterday's discharges for readmission risk, routes high-risk patients to the right care manager with a plain-language outreach brief, captures each outreach call, and measures whether the program is actually moving readmission rates.
 
-> **Status:** Phase 3 of 7 complete (bundle, synthetic EHR source simulator, Lakeflow SDP pipeline, readmission model with champion/challenger gates, daily scoring and capacity-capped worklist with `ai_query` briefs, program history from 2026-05-01). The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
+> **Status:** Phase 4 of 7 complete (bundle, synthetic EHR source simulator, Lakeflow SDP pipeline, readmission model with champion/challenger gates, daily scoring and capacity-capped worklist with `ai_query` briefs, program history from 2026-05-01, Lakebase project with synced worklist tables, app schema, Lakebase CDF feed, simulated outreach history). The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
 >
 > All data is **synthetic**. No real patient or customer data is used anywhere in this repository.
 
@@ -110,24 +110,28 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | Databricks workspace (AWS) | Unity Catalog, serverless compute, Databricks Apps, Genie, and Lakebase Postgres enabled |
 | Lakebase Change Data Feed preview | A workspace admin enables "Lakebase Change Data Feed" on the Previews page |
 | Unity Catalog catalog | Must **not** use default storage (a Lakebase CDF requirement). Dev uses `rtr_demo_catalog` |
-| Databricks CLI | v0.294.0 or later (`databricks postgres` command group) |
-| Python | 3.11+ with `databricks-sdk` 0.81.0 or later (pipeline, ML, setup) |
+| Databricks CLI | v1.19.0 or later (bundle `postgres_*` resources, Beta; built and tested on v1.19.0) |
+| Python | 3.11+ with `databricks-sdk` 0.81.0 or later (pipeline, ML, setup); `psycopg[binary]` 3.2 for Lakebase jobs (installed by the job environments) |
 | uv | 0.9+; builds the `readmit` wheel during `bundle deploy` and runs local tests |
 | Node.js | Current LTS, for the AppKit app |
 | Foundation Model endpoint | Any pay-per-token chat model; set through the `llm_endpoint` bundle variable |
-| Permissions | CREATE CATALOG (or an existing catalog), CAN MANAGE on the Lakebase project, workspace admin for preview enablement |
+| Permissions | CREATE CATALOG (or an existing catalog), permission to create Lakebase projects (the deployer gets CAN MANAGE), workspace admin for preview enablement |
 
-## Deploy and run *(steps 1-2 and 4-6 work today; 3 and 7 are planned)*
+## Deploy and run *(steps 1-6 work today; 7 is planned)*
 
 ```bash
 # 1. Authenticate
 databricks auth login --profile <profile>
 
-# 2. Validate and deploy the bundle to dev
+# 2. Validate and deploy the bundle to dev. Creates the Lakebase project, database,
+#    and synced tables too. Set lakebase_owner_role to your Lakebase role ID
+#    (databricks postgres list-roles projects/<project>/branches/production).
 databricks bundle validate -t dev --profile <profile>
 databricks bundle deploy   -t dev --profile <profile>
 
-# 3. One-time setup: Lakebase synced tables, Lakebase CDF feed, Genie Agent (idempotent)
+# 3. Lakebase setup the bundle cannot declare: app schema (REPLICA IDENTITY FULL),
+#    Lakebase CDF feed, and (Phase 5, --params app_role=<sp>) app grants. Idempotent.
+#    Genie Agent setup joins in Phase 6.
 databricks bundle run readmit_setup -t dev --profile <profile>
 
 # 4. Generate synthetic history and today's extract
@@ -144,7 +148,11 @@ databricks bundle run readmit_model_training -t dev --profile <profile> --params
 #     daily scores and worklists, briefs for the latest 14 days). Idempotent.
 databricks bundle run readmit_program_backfill -t dev --profile <profile>
 
-# 6. Run the daily cycle (ingest, score, build the worklist; Lakebase publish in Phase 4)
+# 5b. Demo only: simulate care-manager outreach for past worklist days, written
+#     through Lakebase so the CDF feed lands it in the lakehouse. Idempotent.
+databricks bundle run readmit_outreach_simulator -t dev --profile <profile>
+
+# 6. Run the daily cycle (ingest, score, build the worklist, publish it to Lakebase)
 databricks bundle run readmit_daily_cycle -t dev --profile <profile>
 
 # 7. Deploy the app
@@ -166,6 +174,11 @@ readmission-risk-worklist/
 │   ├── readmit_model_training.job.yml      # monthly retrain with promotion gates
 │   ├── readmit_program_backfill.job.yml    # demo only: program history from go-live
 │   ├── readmit_wh.sql_warehouse.yml        # <env>_readmit_wh (bound to the existing dev warehouse)
+│   ├── readmission_worklist.postgres_project.yml     # Lakebase project
+│   ├── readmission_worklist_db.postgres_database.yml # Lakebase database readmission_worklist
+│   ├── *_synced.postgres_synced_table.yml  # care_worklist_synced, care_team_roster_synced
+│   ├── readmit_setup.job.yml               # app schema, CDF feed, grants (idempotent)
+│   ├── readmit_outreach_simulator.job.yml  # demo only: outreach history through Lakebase
 │   ├── readmission_risk.registered_model.yml
 │   └── readmission_risk_experiment.experiment.yml
 ├── src/
@@ -174,6 +187,7 @@ readmission-risk-worklist/
 │   │   ├── pipeline/           # Pipeline helpers: DQ rules, source schemas, audit columns, CDC
 │   │   ├── ml/                 # Features, metrics, gates, model, drivers; train and score
 │   │   ├── worklist/           # Gold tables, capacity routing, briefs, build, program backfill
+│   │   ├── lakebase/           # Connection, app schema DDL, CDF feed, setup, publish, outreach simulator
 │   │   └── simulator/          # Synthetic EHR extract generator (entry point: simulate)
 │   ├── pipeline/transformations/  # Lakeflow SDP sources, one file per dataset or entity
 │   └── app/                    # (planned) Databricks App, AppKit
@@ -183,7 +197,6 @@ readmission-risk-worklist/
 └── docs/                       # High-level design (PDF and HTML source), decision log
 ```
 
-ML training, scoring, worklist build, and setup code will be added as `readmit` subpackages.
 
 ## Ingest and curate pipeline
 
@@ -217,6 +230,19 @@ Outreach, program settings, and app audit tables (`care_management_silver.outrea
 | Outreach brief | `ai_query` on `${var.llm_endpoint}` with the minimum necessary facts (no name, MRN, or phone), drafted once per item for the latest `brief_days` worklist days. Pay-per-token Foundation Model APIs are HIPAA compliant across all regions ([docs](https://docs.databricks.com/aws/en/machine-learning/foundation-model-apis/compliance)); see DECISIONS.md #38 for the Compliance Security Profile and cross-Geo caveats |
 
 Promotion gates (job parameters): first model AUC >= 0.68 and calibration slope 0.8-1.2; later challengers AUC >= champion - 0.005 and Brier no worse on the same test window. Capacity is per care manager per day (`seeds/care_manager_capacity.csv`; Program Settings in Phase 5). Run evidence: [`evidence/phase3/`](evidence/phase3/).
+
+## Lakebase serving and write-back
+
+| Asset | What it does |
+|---|---|
+| Project `readmission-worklist` | Postgres 17, autoscaling 0.5 to `lakebase_max_cu` CU, scale-to-zero after 5 minutes; bundle resource with `prevent_destroy` |
+| Database `readmission_worklist` | Holds both schemas so the app can join the synced worklist with its own writes |
+| `readmission_worklist_gold.care_worklist_synced`, `care_team_roster_synced` | Synced tables (TRIGGERED, read-only in Postgres). The daily cycle's `publish_worklist` task starts each sync after `build_worklist` and fails unless Postgres matches UC for the day |
+| `readmission_worklist_app.outreach_activity`, `program_setting_change` | App-owned, append-only (the app role gets SELECT, INSERT only), CHECK-constrained controlled values, `REPLICA IDENTITY FULL` |
+| Lakebase CDF feed `readmission_worklist_app` | Streams the app schema into `readmission_worklist_app_bronze.lb_<table>_history` (about 15 s batches). Never configured on the synced gold schema |
+| `<env>_readmit_outreach_simulator` (demo only) | Deterministic outreach history for past worklist days (about 60% reach rate), written through Lakebase like the app. Does not change outcomes |
+
+Run evidence: [`evidence/phase4/`](evidence/phase4/). Decisions #40-#44.
 
 ## Synthetic EHR source simulator
 
@@ -255,6 +281,10 @@ Bundle variables in `databricks.yml`:
 | `catalog` | Unity Catalog catalog | `rtr_demo_catalog` (dev), `prod_care_management` (prod) |
 | `lakebase_project` | Lakebase project ID | `readmission-worklist` |
 | `lakebase_database` | Lakebase Postgres database | `readmission_worklist` |
+| `lakebase_database_id` | Lakebase database resource ID (hyphens) | `readmission-worklist` |
+| `lakebase_branch` | Branch that serves the app | `production` |
+| `lakebase_owner_role` | Lakebase role ID that owns the database (the deploying identity) | `ryan-rabold` (dev) |
+| `lakebase_max_cu` | Autoscaling ceiling of the primary endpoint | `2` (dev), `4` (prod) |
 | `llm_endpoint` | Foundation Model endpoint used by `ai_query` | your workspace's pay-per-token chat endpoint |
 | `warehouse_max_clusters` | Scale-out limit for `<env>_readmit_wh` (bundle-managed) | `1` (dev), `2` (prod) |
 | `program_go_live` | First worklist day of the program; backfill start | `2026-05-01` |

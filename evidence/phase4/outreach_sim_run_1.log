@@ -1,0 +1,19 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/108630907728565/runs/1022881467752189?o=7474647046080636
+
+2026-11-05 17:42:52 "dev_readmit_outreach_simulator" RUNNING
+2026-11-05 17:43:40 "dev_readmit_outreach_simulator" TERMINATED SUCCESS
+{
+  "run_date": "2026-11-05",
+  "cutoff": "2026-11-05T12:00:00+00:00",
+  "assigned_items": 8318,
+  "planned_activities": 19616,
+  "inserted": 19616,
+  "by_type": {
+    "NO_ANSWER": 7996,
+    "LEFT_VOICEMAIL": 3709,
+    "DECLINED": 381,
+    "REACHED": 4981,
+    "UNREACHABLE": 2549
+  },
+  "reach_rate": 0.599
+}

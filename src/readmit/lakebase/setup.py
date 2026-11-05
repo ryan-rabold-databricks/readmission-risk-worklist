@@ -67,7 +67,7 @@ def main(argv: list[str] | None = None) -> None:
     cfg = ensure_cdf_config(w, db_path, args.catalog)
     summary["cdf_config"] = {"name": cfg.name, "postgres_schema": cfg.postgres_schema,
                              "destination": f"{cfg.catalog}.{cfg.schema}"}
-    summary["cdf_statuses"] = cdf_statuses(w, db_path)
+    summary["cdf_statuses"] = cdf_statuses(w, cfg.name)
     print(json.dumps(summary, indent=2, default=str))
 
 

@@ -6,8 +6,6 @@ gold schema must never get a feed (project CLAUDE.md), so it is refused here.
 
 from __future__ import annotations
 
-import time
-
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound
 from databricks.sdk.service.postgres import CdfConfig
@@ -15,7 +13,7 @@ from databricks.sdk.service.postgres import CdfConfig
 from readmit.lakebase.app_schema import APP_SCHEMA, SYNCED_SCHEMA
 
 CDF_DESTINATION_SCHEMA = "readmission_worklist_app_bronze"
-CDF_CONFIG_ID = "readmission-worklist-app"
+CDF_CONFIG_ID = "readmission_worklist_app"  # [a-z][a-z0-9_]{0,62}
 FORBIDDEN_SOURCE_SCHEMAS = {SYNCED_SCHEMA}
 
 
@@ -41,25 +39,13 @@ def ensure_cdf_config(w: WorkspaceClient, database_path: str, catalog: str,
     ).wait()
 
 
-def cdf_statuses(w: WorkspaceClient, database_path: str) -> list[dict]:
+def cdf_statuses(w: WorkspaceClient, cdf_config_name: str) -> list[dict]:
+    """Per-table feed status. The parent is the CDF config path, not the database path."""
     try:
-        statuses = list(w.postgres.list_cdf_statuses(parent=database_path))
+        statuses = list(w.postgres.list_cdf_statuses(parent=cdf_config_name))
     except NotFound:
         return []
     return [{"postgres_table": s.postgres_table, "uc_table": s.uc_table,
-             "state": str(s.state).rsplit(".", 1)[-1] if s.state else None,
+             "state": s.state.value if s.state else None,
              "last_sync_time": str(s.last_sync_time) if s.last_sync_time else None,
              "detail": s.status_detail} for s in statuses]
-
-
-def wait_for_streaming(w: WorkspaceClient, database_path: str, tables: set[str], timeout_s: int = 900) -> list[dict]:
-    """Wait until every named table streams. Tables with no rows are skipped by CDF
-    until their first row, so callers pass only non-empty tables."""
-    deadline = time.time() + timeout_s
-    while True:
-        statuses = cdf_statuses(w, database_path)
-        streaming = {s["postgres_table"].rsplit(".", 1)[-1] for s in statuses
-                     if s["postgres_table"] and s["state"] == "CDF_STATE_STREAMING"}
-        if tables <= streaming or time.time() > deadline:
-            return statuses
-        time.sleep(15)

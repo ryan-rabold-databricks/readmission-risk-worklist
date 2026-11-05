@@ -1,0 +1,51 @@
+### select column_name, full_data_type from rtr_demo_catalog.information_schema.columns where table_schema='readmission_worklist_app_bronze' and table_name='lb_outreach_activity_history' order by ordinal_position
+SUCCEEDED 
+['column_name', 'full_data_type']
+['_pg_change_type', 'string']
+['_pg_lsn', 'long']
+['_pg_xid', 'integer']
+['_timestamp', 'timestamp_ntz']
+['_sort_by', 'long']
+['activity_id', 'binary']
+['worklist_item_id', 'string']
+['client_request_id', 'string']
+['care_manager_email', 'string']
+['activity_type', 'string']
+['activity_ts', 'timestamp']
+['next_step_due_at', 'timestamp']
+['note', 'string']
+['created_at', 'timestamp']
+### select _pg_change_type, count(*) rows, count(distinct activity_id) ids, count(distinct client_request_id) req_ids, min(_timestamp), max(_timestamp) from rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history group by 1
+SUCCEEDED 
+['_pg_change_type', 'rows', 'ids', 'req_ids', 'min(_timestamp)', 'max(_timestamp)']
+['insert', '19616', '19616', '19616', '2026-11-05T22:43:27.894', '2026-11-05T22:43:28.731']
+### select activity_type, count(*) from rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history group by 1 order by 2 desc
+SUCCEEDED 
+['activity_type', 'count(1)']
+['NO_ANSWER', '7996']
+['REACHED', '4981']
+['LEFT_VOICEMAIL', '3709']
+['UNREACHABLE', '2549']
+['DECLINED', '381']
+### select count(*) as orphan_items from rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history h left anti join rtr_demo_catalog.readmission_worklist_gold.care_worklist w on w.worklist_item_id=h.worklist_item_id
+SUCCEEDED 
+['orphan_items']
+['0']
+### select count(*) from rtr_demo_catalog.readmission_worklist_app_bronze.lb_program_setting_change_history
+SUCCEEDED 
+['count(1)']
+['0']
+### select table_name, table_type from rtr_demo_catalog.information_schema.tables where table_schema='readmission_worklist_gold' order by 1
+SUCCEEDED 
+['table_name', 'table_type']
+['__0d441e38_cce0_492b_997d_a5a1bc1dcaae_readmission_worklist_readmission_worklist_gold_care_team_roster_synced_d6ab3261_1dbf_49cb_b080_a1280964a79e', 'MANAGED']
+['__662bda51_13fe_4ea7_a92b_9552e6b33cc6_readmission_worklist_readmission_worklist_gold_care_worklist_synced_1aa44fcd_0e2e_443c_bd13_394f76350138', 'MANAGED']
+['__materialization_mat_681e67de_8388_473c_95d2_56d9e3aa606f_discharge_features_1', 'MANAGED']
+['care_team_roster', 'MANAGED']
+['care_team_roster_synced', 'FOREIGN']
+['care_worklist', 'MANAGED']
+['care_worklist_synced', 'FOREIGN']
+['discharge_features', 'MATERIALIZED_VIEW']
+['discharge_risk_score', 'MANAGED']
+['event_log_0d441e38_cce0_492b_997d_a5a1bc1dcaae', 'MANAGED']
+['event_log_662bda51_13fe_4ea7_a92b_9552e6b33cc6', 'MANAGED']

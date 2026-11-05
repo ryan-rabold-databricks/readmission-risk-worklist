@@ -13,7 +13,6 @@ import json
 import time
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.pipelines import UpdateInfoState
 
 from readmit.common.dates import parse_or_today
 from readmit.common.env_guardrail import assert_environment
@@ -26,7 +25,8 @@ SYNCED_TABLES = {
     "care_worklist_synced": ("care_worklist", "worklist_date"),
     "care_team_roster_synced": ("care_team_roster", "roster_date"),
 }
-FINAL = {UpdateInfoState.COMPLETED, UpdateInfoState.FAILED, UpdateInfoState.CANCELED}
+# Compared by value: latest_updates[].state and get_update().state are different enum types.
+FINAL = {"COMPLETED", "FAILED", "CANCELED"}
 SYNC_TIMEOUT_S = 1800
 
 
@@ -37,24 +37,28 @@ def pipeline_id(w: WorkspaceClient, catalog: str, synced: str) -> str:
     return st.status.pipeline_id
 
 
+def _state(state) -> str:
+    return getattr(state, "value", str(state))
+
+
 def run_sync(w: WorkspaceClient, pid: str) -> dict:
     # The managed pipeline may still be finishing an earlier update; wait for it.
     deadline = time.time() + SYNC_TIMEOUT_S
-    while (p := w.pipelines.get(pid)).latest_updates and p.latest_updates[0].state not in FINAL:
+    while (p := w.pipelines.get(pid)).latest_updates and _state(p.latest_updates[0].state) not in FINAL:
         if time.time() > deadline:
             raise TimeoutError(f"Pipeline {pid} busy for {SYNC_TIMEOUT_S}s")
         time.sleep(15)
     update_id = w.pipelines.start_update(pid).update_id
     while True:
         u = w.pipelines.get_update(pid, update_id).update
-        if u.state in FINAL:
+        if _state(u.state) in FINAL:
             break
         if time.time() > deadline:
             raise TimeoutError(f"Sync update {update_id} on {pid} did not finish in {SYNC_TIMEOUT_S}s")
         time.sleep(15)
-    if u.state != UpdateInfoState.COMPLETED:
+    if _state(u.state) != "COMPLETED":
         raise RuntimeError(f"Sync update {update_id} on pipeline {pid} ended {u.state}")
-    return {"pipeline_id": pid, "update_id": update_id, "state": u.state.value}
+    return {"pipeline_id": pid, "update_id": update_id, "state": _state(u.state)}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
