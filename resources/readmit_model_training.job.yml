@@ -1,0 +1,48 @@
+# Monthly retrain: registers @challenger and promotes to @champion only through the gates.
+
+resources:
+  jobs:
+    readmit_model_training:
+      name: ${var.env}_readmit_model_training
+      description: Monthly retrain of readmission_risk with champion/challenger promotion gates.
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      schedule:
+        quartz_cron_expression: "0 0 3 1 * ?"
+        timezone_id: America/Chicago
+      parameters:
+        - name: as_of
+          default: ""
+        - name: min_auc
+          default: "0.68"
+        - name: slope_min
+          default: "0.8"
+        - name: slope_max
+          default: "1.2"
+        - name: auc_tolerance
+          default: "0.005"
+      tasks:
+        - task_key: train_and_promote
+          environment_key: ml
+          python_wheel_task:
+            package_name: readmit
+            entry_point: train
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --experiment-id=${resources.experiments.readmission_risk_experiment.id}
+              - --as-of={{job.parameters.as_of}}
+              - --min-auc={{job.parameters.min_auc}}
+              - --slope-min={{job.parameters.slope_min}}
+              - --slope-max={{job.parameters.slope_max}}
+              - --auc-tolerance={{job.parameters.auc_tolerance}}
+      environments:
+        - environment_key: ml
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl
+              - xgboost==2.1.4
+              - scikit-learn==1.6.1
+              - mlflow==3.1.0
+              - matplotlib

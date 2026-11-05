@@ -3,6 +3,7 @@
 - clinical_silver.facility
 - care_management_silver.risk_tier_policy
 - care_management_silver.care_team_assignment
+- care_management_silver.care_manager_capacity
 
 Phase 4 adds Program Settings changes (Lakebase CDF) on top of the seeded values.
 """
@@ -53,22 +54,48 @@ def risk_tier_policy():
 @dp.materialized_view(
     name=settings.table("care_management_silver", "care_team_assignment"),
     comment=(
-        "Care manager to facility assignments and daily capacity (seed: "
-        "seeds/care_team_assignment.csv). PK = SHA-256(care_manager_email, facility_id)."
+        "Facilities each care manager covers (seed: seeds/care_team_assignment.csv). "
+        "PK = SHA-256(care_manager_email, facility_id, effective_date)."
     ),
     schema=(
         "assignment_id STRING NOT NULL, care_manager_email STRING NOT NULL, facility_id STRING NOT NULL, "
-        "daily_capacity INT NOT NULL, effective_date DATE NOT NULL, expiration_date DATE, "
-        f"{AUDIT_SCHEMA}, "
+        f"effective_date DATE NOT NULL, expiration_date DATE, {AUDIT_SCHEMA}, "
         "CONSTRAINT care_team_assignment_pk PRIMARY KEY (assignment_id)"
     ),
 )
-@dp.expect_all_or_fail({"capacity_positive": "daily_capacity > 0"})
+@dp.expect_all_or_fail({"dates_ordered": "expiration_date IS NULL OR expiration_date > effective_date"})
 def care_team_assignment():
     seed = read_seed(spark, settings.seeds_path, "care_team_assignment")  # noqa: F821
     return seed.select(
-        hash_key(F.lower("care_manager_email"), "facility_id").alias("assignment_id"),
+        hash_key(F.lower("care_manager_email"), "facility_id", "effective_date").alias("assignment_id"),
         F.lower("care_manager_email").alias("care_manager_email"),
-        "facility_id", "daily_capacity", "effective_date", "expiration_date",
+        "facility_id", "effective_date", "expiration_date",
         *_audit("care_team_assignment"),
+    )
+
+
+@dp.materialized_view(
+    name=settings.table("care_management_silver", "care_manager_capacity"),
+    comment=(
+        "Daily capacity per care manager: the most new worklist items assigned to them per day, "
+        "across all their facilities (seed: seeds/care_manager_capacity.csv). "
+        "PK = SHA-256(care_manager_email, effective_date)."
+    ),
+    schema=(
+        "capacity_id STRING NOT NULL, care_manager_email STRING NOT NULL, daily_capacity INT NOT NULL, "
+        f"effective_date DATE NOT NULL, expiration_date DATE, {AUDIT_SCHEMA}, "
+        "CONSTRAINT care_manager_capacity_pk PRIMARY KEY (capacity_id)"
+    ),
+)
+@dp.expect_all_or_fail({
+    "capacity_positive": "daily_capacity > 0",
+    "dates_ordered": "expiration_date IS NULL OR expiration_date > effective_date",
+})
+def care_manager_capacity():
+    seed = read_seed(spark, settings.seeds_path, "care_manager_capacity")  # noqa: F821
+    return seed.select(
+        hash_key(F.lower("care_manager_email"), "effective_date").alias("capacity_id"),
+        F.lower("care_manager_email").alias("care_manager_email"),
+        "daily_capacity", "effective_date", "expiration_date",
+        *_audit("care_manager_capacity"),
     )

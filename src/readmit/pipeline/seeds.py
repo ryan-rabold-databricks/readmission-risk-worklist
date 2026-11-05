@@ -18,8 +18,10 @@ SEED_SCHEMAS: dict[str, str] = {
         "include_in_worklist BOOLEAN, is_active BOOLEAN"
     ),
     "care_team_assignment": (
-        "care_manager_email STRING, facility_id STRING, daily_capacity INT, "
-        "effective_date DATE, expiration_date DATE"
+        "care_manager_email STRING, facility_id STRING, effective_date DATE, expiration_date DATE"
+    ),
+    "care_manager_capacity": (
+        "care_manager_email STRING, daily_capacity INT, effective_date DATE, expiration_date DATE"
     ),
 }
 

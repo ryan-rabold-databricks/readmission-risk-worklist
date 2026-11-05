@@ -1,0 +1,4 @@
+resources:
+  experiments:
+    readmission_risk_experiment:
+      name: ${workspace.root_path}/readmission_risk_experiment

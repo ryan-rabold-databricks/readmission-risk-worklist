@@ -6,11 +6,15 @@ requires-python = ">=3.11"
 dependencies = ["databricks-sdk>=0.81.0"]
 
 [project.optional-dependencies]
-simulator = ["faker>=30"]
+ml = ["xgboost==2.1.4", "scikit-learn==1.6.1", "mlflow==3.1.0", "matplotlib"]
 dev = ["pytest>=8", "pyspark>=3.5"]
 
 [project.scripts]
 simulate = "readmit.simulator.main:main"
+train = "readmit.ml.train:main"
+score = "readmit.ml.score:main"
+build_worklist = "readmit.worklist.build:main"
+backfill_program = "readmit.worklist.backfill:main"
 
 [build-system]
 requires = ["hatchling"]

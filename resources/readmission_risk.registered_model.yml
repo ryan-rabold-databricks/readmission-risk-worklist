@@ -1,0 +1,9 @@
+resources:
+  registered_models:
+    readmission_risk:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.readmission_worklist_gold.name}
+      name: readmission_risk
+      comment: >-
+        30-day non-elective readmission risk (XGBoost on LACE-style features). Aliases:
+        @champion scores the worklist; @challenger is the latest trained version.

@@ -1,0 +1,38 @@
+# Demo only: replays the program from program_go_live (monthly retrain, daily scoring
+# and worklists with the then-current @champion), then drafts briefs for recent days.
+
+resources:
+  jobs:
+    readmit_program_backfill:
+      name: ${var.env}_readmit_program_backfill
+      description: Demo only. Backfills program history from go-live; idempotent and resumable.
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+      parameters:
+        - name: run_date
+          default: ""
+      tasks:
+        - task_key: backfill_program
+          environment_key: ml
+          python_wheel_task:
+            package_name: readmit
+            entry_point: backfill_program
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --experiment-id=${resources.experiments.readmission_risk_experiment.id}
+              - --go-live=${var.program_go_live}
+              - --run-date={{job.parameters.run_date}}
+              - --llm-endpoint=${var.llm_endpoint}
+              - --brief-days=${var.brief_days}
+              - --process=${var.env}_readmit_program_backfill
+      environments:
+        - environment_key: ml
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl
+              - xgboost==2.1.4
+              - scikit-learn==1.6.1
+              - mlflow==3.1.0
+              - matplotlib

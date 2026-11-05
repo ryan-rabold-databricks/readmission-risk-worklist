@@ -46,6 +46,9 @@ def _days(n: int):
     ),
     cluster_by=["facility_id", "discharge_date"],
 )
+# A discharge can arrive before its patient record (late-arriving EHR data). Drop it
+# (counted in the event log) rather than fail the refresh; it appears once the record lands.
+@dp.expect_or_drop("patient_record_present", "age_at_discharge IS NOT NULL")
 @dp.expect_all({
     "age_plausible": "age_at_discharge BETWEEN 18 AND 110",
     "label_only_when_matured": "(readmit_30d IS NULL) = (label_matured_at IS NULL)",

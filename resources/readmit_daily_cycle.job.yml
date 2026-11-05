@@ -1,0 +1,61 @@
+# Daily cycle: ingest_curate -> score_discharges -> build_worklist. Runs after the
+# nightly EHR extract lands; each task catches up any missed days.
+
+resources:
+  jobs:
+    readmit_daily_cycle:
+      name: ${var.env}_readmit_daily_cycle
+      description: Ingest and curate EHR extracts, score yesterday's discharges, build and route the worklist.
+      max_concurrent_runs: 1
+      timeout_seconds: 5400
+      schedule:
+        quartz_cron_expression: "0 30 5 * * ?"
+        timezone_id: America/Chicago
+      parameters:
+        - name: run_date
+          default: ""
+      tasks:
+        - task_key: ingest_curate
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.readmit_pipeline.id}
+            full_refresh: false
+        - task_key: score_discharges
+          depends_on:
+            - task_key: ingest_curate
+          environment_key: ml
+          max_retries: 1
+          python_wheel_task:
+            package_name: readmit
+            entry_point: score
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --run-date={{job.parameters.run_date}}
+              - --go-live=${var.program_go_live}
+              - --process=${var.env}_readmit_daily_cycle
+        - task_key: build_worklist
+          depends_on:
+            - task_key: score_discharges
+          environment_key: ml
+          max_retries: 1
+          python_wheel_task:
+            package_name: readmit
+            entry_point: build_worklist
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --run-date={{job.parameters.run_date}}
+              - --go-live=${var.program_go_live}
+              - --llm-endpoint=${var.llm_endpoint}
+              - --brief-days=${var.brief_days}
+              - --process=${var.env}_readmit_daily_cycle
+      environments:
+        - environment_key: ml
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl
+              - xgboost==2.1.4
+              - scikit-learn==1.6.1
+              - mlflow==3.1.0
+              - matplotlib

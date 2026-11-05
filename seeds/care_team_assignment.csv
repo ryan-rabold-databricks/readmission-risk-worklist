@@ -1,6 +1,6 @@
-care_manager_email,facility_id,daily_capacity,effective_date,expiration_date
-ryan.rabold@databricks.com,FAC-LMC,15,2024-11-01,
-ryan.rabold@databricks.com,FAC-NGR,12,2024-11-01,
-ryan.rabold@databricks.com,FAC-SVH,10,2024-11-01,
-ryan.rabold@databricks.com,FAC-CCH,8,2024-11-01,
-ryan.rabold@databricks.com,FAC-RCH,8,2024-11-01,
+care_manager_email,facility_id,effective_date,expiration_date
+ryan.rabold@databricks.com,FAC-LMC,2024-11-01,
+ryan.rabold@databricks.com,FAC-NGR,2024-11-01,
+ryan.rabold@databricks.com,FAC-SVH,2024-11-01,
+ryan.rabold@databricks.com,FAC-CCH,2024-11-01,
+ryan.rabold@databricks.com,FAC-RCH,2024-11-01,

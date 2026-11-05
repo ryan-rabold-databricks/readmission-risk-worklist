@@ -17,7 +17,8 @@ from pyspark.sql import functions as F
 from readmit.common.env_guardrail import assert_environment
 from readmit.common.spark import get_spark
 from readmit.simulator.config import SimulatorConfig
-from readmit.simulator.generate import ENTITIES, build_universe
+from readmit.pipeline.source_schemas import SOURCE_SCHEMAS
+from readmit.simulator.generate import ENTITIES, LOOKAHEAD_DAYS, build_universe
 from readmit.simulator.summary import extract_counts, story_report
 
 # Bump when the extract schema or generation logic changes; see assert_single_generator_version.
@@ -47,6 +48,24 @@ def missing_dates(history_start: date, run_date: date, landed: set[date]) -> lis
     return [d for d in (history_start + timedelta(days=i) for i in range(span)) if d not in landed]
 
 
+def late_records(spark, universe_df, entity: str, volume_root: str, dates: list[date]):
+    """Records the generator places on already-landed dates that the landing zone lacks.
+
+    Multiset difference (exceptAll), so re-sent duplicates are compared correctly.
+    """
+    if not dates:
+        return None
+    strs = [d.isoformat() for d in dates]
+    landed = (
+        spark.read.schema(SOURCE_SCHEMAS[entity]).option("timestampFormat", "yyyy-MM-dd'T'HH:mm:ss")
+        .json(f"{volume_root}/{entity}")
+        .filter(F.col("extract_date").cast("string").isin(strs))
+    )
+    expected = universe_df.filter(F.col("extract_date").cast("string").isin(strs))
+    cols = landed.columns
+    return expected.select(*cols).exceptAll(landed.select(*cols))
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     assert_environment(args.env, args.catalog)
@@ -72,7 +91,10 @@ def main(argv: list[str] | None = None) -> None:
     assert_single_generator_version(manifests, GENERATOR_VERSION)
     landed = landed_dates(manifests)
     targets = missing_dates(cfg.history_start, cfg.run_date, landed)
-    if not targets:
+    recent_landed = sorted(d for d in landed if d > cfg.run_date - timedelta(days=LOOKAHEAD_DAYS))
+    late = {e: late_records(spark, universe.extracts[e], e, volume_root, recent_landed) for e in ENTITIES}
+    late_counts = {e: (df.count() if df is not None else 0) for e, df in late.items()}
+    if not targets and not any(late_counts.values()):
         print(f"All extract dates through {cfg.run_date} are already landed; nothing to do.")
         return
 
@@ -85,6 +107,12 @@ def main(argv: list[str] | None = None) -> None:
         entity: df.filter(F.col("extract_date").cast("string").isin(target_strs))
         for entity, df in universe.extracts.items()
     }
+    for entity, extra in late.items():
+        if late_counts[entity]:
+            # Late-arriving records for dates already landed: appended to their date folder.
+            to_land[entity] = to_land[entity].unionByName(extra)
+    if any(late_counts.values()):
+        print(f"Late-arriving records for already-landed dates: {late_counts}")
     for entity, df in to_land.items():
         (
             df.repartition("extract_date")
@@ -101,9 +129,11 @@ def main(argv: list[str] | None = None) -> None:
         run_id,
         targets,
         counts,
-        {"generator_version": GENERATOR_VERSION, "seed": cfg.seed, "history_start": cfg.history_start.isoformat()},
+        {"generator_version": GENERATOR_VERSION, "seed": cfg.seed, "history_start": cfg.history_start.isoformat(),
+         "late_records": late_counts},
     )
-    print(f"Landed {len(targets)} extract dates ({targets[0]} to {targets[-1]}); manifest {manifest}")
+    span = f" ({targets[0]} to {targets[-1]})" if targets else ""
+    print(f"Landed {len(targets)} new extract dates{span}; manifest {manifest}")
     for entity in ENTITIES:
         print(f"  {entity}: {sum(counts[entity].values()):,} records")
     print(story_report(universe.inpatient, cfg.run_date, args.avg_readmission_cost))

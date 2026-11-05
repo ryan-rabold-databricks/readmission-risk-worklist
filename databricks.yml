@@ -39,6 +39,12 @@ variables:
   llm_endpoint:
     description: Foundation Model endpoint used by ai_query for outreach briefs.
     default: databricks-claude-opus-5-5
+  program_go_live:
+    description: First worklist day of the readmission prevention program (backfill start).
+    default: "2026-05-01"
+  brief_days:
+    description: Outreach briefs (ai_query) are drafted for the most recent N worklist days only.
+    default: "14"
   avg_readmission_cost:
     description: Average cost of one readmission, used for estimated cost avoided.
     default: "15000"
