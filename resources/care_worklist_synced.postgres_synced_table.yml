@@ -1,0 +1,19 @@
+# Gold tables synced to Lakebase for the app (DECISIONS.md #9, #40). The UC schema
+# readmission_worklist_gold becomes the Postgres schema of the same name; tables are
+# read-only in Postgres. TRIGGERED: the daily cycle's publish_worklist task starts
+# each sync after build_worklist, so the app sees a complete worklist day at once.
+
+resources:
+  postgres_synced_tables:
+    care_worklist_synced:
+      synced_table_id: ${var.catalog}.readmission_worklist_gold.care_worklist_synced
+      source_table_full_name: ${var.catalog}.readmission_worklist_gold.care_worklist
+      primary_key_columns:
+        - worklist_item_id
+      scheduling_policy: TRIGGERED
+      branch: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}
+      postgres_database: ${resources.postgres_databases.readmission_worklist_db.postgres_database}
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: readmission_worklist_gold

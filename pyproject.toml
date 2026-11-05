@@ -7,6 +7,7 @@ dependencies = ["databricks-sdk>=0.81.0"]
 
 [project.optional-dependencies]
 ml = ["xgboost==2.1.4", "scikit-learn==1.6.1", "mlflow==3.1.0", "matplotlib"]
+lakebase = ["psycopg[binary]==3.2.9"]
 dev = ["pytest>=8", "pyspark>=3.5"]
 
 [project.scripts]
@@ -15,6 +16,9 @@ train = "readmit.ml.train:main"
 score = "readmit.ml.score:main"
 build_worklist = "readmit.worklist.build:main"
 backfill_program = "readmit.worklist.backfill:main"
+setup_lakebase = "readmit.lakebase.setup:main"
+publish_worklist = "readmit.lakebase.publish:main"
+simulate_outreach = "readmit.lakebase.outreach_sim:main"
 
 [build-system]
 requires = ["hatchling"]

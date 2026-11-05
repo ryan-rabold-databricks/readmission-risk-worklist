@@ -1,0 +1,13 @@
+# Lakebase database for the app: synced gold tables and the app's own schema share it,
+# because Postgres cannot join across databases (DECISIONS.md #8).
+
+resources:
+  postgres_databases:
+    readmission_worklist_db:
+      # Resource IDs allow hyphens only; the Postgres name uses underscores.
+      database_id: ${var.lakebase_database_id}
+      postgres_database: ${var.lakebase_database}
+      parent: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}
+      role: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}/roles/${var.lakebase_owner_role}
+      lifecycle:
+        prevent_destroy: true

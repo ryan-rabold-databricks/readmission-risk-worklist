@@ -1,0 +1,17 @@
+# Care manager roster synced to Lakebase; the app scopes every worklist query to the
+# signed-in user's facility assignments from this table.
+
+resources:
+  postgres_synced_tables:
+    care_team_roster_synced:
+      synced_table_id: ${var.catalog}.readmission_worklist_gold.care_team_roster_synced
+      source_table_full_name: ${var.catalog}.readmission_worklist_gold.care_team_roster
+      primary_key_columns:
+        - roster_id
+      scheduling_policy: TRIGGERED
+      branch: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}
+      postgres_database: ${resources.postgres_databases.readmission_worklist_db.postgres_database}
+      create_database_objects_if_missing: true
+      new_pipeline_spec:
+        storage_catalog: ${var.catalog}
+        storage_schema: readmission_worklist_gold

@@ -1,11 +1,11 @@
-# Daily cycle: ingest_curate -> score_discharges -> build_worklist. Runs after the
+# Daily cycle: ingest_curate -> score_discharges -> build_worklist -> publish_worklist. Runs after the
 # nightly EHR extract lands; each task catches up any missed days.
 
 resources:
   jobs:
     readmit_daily_cycle:
       name: ${var.env}_readmit_daily_cycle
-      description: Ingest and curate EHR extracts, score yesterday's discharges, build and route the worklist.
+      description: Ingest and curate EHR extracts, score yesterday's discharges, build and route the worklist, publish it to Lakebase.
       max_concurrent_runs: 1
       timeout_seconds: 5400
       schedule:
@@ -49,7 +49,28 @@ resources:
               - --llm-endpoint=${var.llm_endpoint}
               - --brief-days=${var.brief_days}
               - --process=${var.env}_readmit_daily_cycle
+        - task_key: publish_worklist
+          depends_on:
+            - task_key: build_worklist
+          environment_key: lakebase
+          max_retries: 1
+          python_wheel_task:
+            package_name: readmit
+            entry_point: publish_worklist
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --run-date={{job.parameters.run_date}}
+              - --lakebase-project=${var.lakebase_project}
+              - --lakebase-branch=${var.lakebase_branch}
+              - --lakebase-database=${var.lakebase_database}
       environments:
+        - environment_key: lakebase
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl
+              - psycopg[binary]==3.2.9
         - environment_key: ml
           spec:
             environment_version: "4"

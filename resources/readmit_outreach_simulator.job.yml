@@ -1,0 +1,34 @@
+# Demo only: care-manager outreach for worklist days before run_date, written through
+# Lakebase like the app, so Lakebase CDF carries it into the lakehouse. Idempotent.
+
+resources:
+  jobs:
+    readmit_outreach_simulator:
+      name: ${var.env}_readmit_outreach_simulator
+      description: Demo only. Simulates outreach activity in Lakebase for past worklist days.
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      parameters:
+        - name: run_date
+          default: ""
+      tasks:
+        - task_key: simulate_outreach
+          environment_key: lakebase
+          python_wheel_task:
+            package_name: readmit
+            entry_point: simulate_outreach
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --go-live=${var.program_go_live}
+              - --run-date={{job.parameters.run_date}}
+              - --lakebase-project=${var.lakebase_project}
+              - --lakebase-branch=${var.lakebase_branch}
+              - --lakebase-database=${var.lakebase_database}
+      environments:
+        - environment_key: lakebase
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl
+              - psycopg[binary]==3.2.9

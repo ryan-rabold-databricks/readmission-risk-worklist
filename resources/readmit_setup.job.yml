@@ -1,0 +1,35 @@
+# One-time, idempotent setup for what the bundle cannot declare: the app's Postgres
+# schema (REPLICA IDENTITY FULL), the Lakebase CDF feed into
+# readmission_worklist_app_bronze, and app grants. Genie Agent setup joins in Phase 6.
+# Run after every `bundle deploy` that changes Lakebase resources; reruns are no-ops.
+
+resources:
+  jobs:
+    readmit_setup:
+      name: ${var.env}_readmit_setup
+      description: Idempotent Lakebase setup (app schema, CDF feed, grants).
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      parameters:
+        - name: app_role
+          default: ""
+      tasks:
+        - task_key: setup_lakebase
+          environment_key: lakebase
+          python_wheel_task:
+            package_name: readmit
+            entry_point: setup_lakebase
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --lakebase-project=${var.lakebase_project}
+              - --lakebase-branch=${var.lakebase_branch}
+              - --lakebase-database=${var.lakebase_database}
+              - --app-role={{job.parameters.app_role}}
+      environments:
+        - environment_key: lakebase
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl
+              - psycopg[binary]==3.2.9

@@ -34,8 +34,19 @@ variables:
     description: Lakebase project ID (hyphens only).
     default: readmission-worklist
   lakebase_database:
-    description: Lakebase Postgres database (underscores only).
+    description: Lakebase Postgres database name (underscores only).
     default: readmission_worklist
+  lakebase_database_id:
+    description: Lakebase database resource ID (hyphens only) for lakebase_database.
+    default: readmission-worklist
+  lakebase_branch:
+    description: Lakebase branch that serves the app.
+    default: production
+  lakebase_owner_role:
+    description: Lakebase role ID that owns the database (the deploying identity's role).
+  lakebase_max_cu:
+    description: Autoscaling ceiling for the Lakebase primary endpoint (compute units).
+    default: 2
   llm_endpoint:
     description: Foundation Model endpoint used by ai_query for outreach briefs.
     default: databricks-claude-opus-5-5
@@ -72,6 +83,7 @@ targets:
     variables:
       env: dev
       catalog: rtr_demo_catalog
+      lakebase_owner_role: ryan-rabold
 
   prod:
     mode: production
@@ -82,5 +94,8 @@ targets:
       env: prod
       catalog: prod_care_management
       warehouse_max_clusters: 2
+      lakebase_max_cu: 4
+      # Set to the Lakebase role ID of the prod service principal.
+      lakebase_owner_role: ""
     run_as:
       service_principal_name: ${var.service_principal_id}

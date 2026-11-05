@@ -1,0 +1,25 @@
+# Lakebase Postgres project for the app (DECISIONS.md #8, #40).
+# The database is readmission_worklist_db.postgres_database.yml.
+# The project auto-creates the `production` branch and its primary read-write endpoint.
+# Schemas, tables, REPLICA IDENTITY, the CDF feed, and grants are applied by
+# <env>_readmit_setup, because bundles have no resource for them.
+
+resources:
+  postgres_projects:
+    readmission_worklist:
+      project_id: ${var.lakebase_project}
+      display_name: Readmission Worklist (${var.env})
+      pg_version: 17
+      # Soft delete on bundle destroy (restorable within the retention window).
+      purge_on_delete: false
+      lifecycle:
+        prevent_destroy: true
+      default_endpoint_settings:
+        autoscaling_limit_min_cu: 0.5
+        autoscaling_limit_max_cu: ${var.lakebase_max_cu}
+        suspend_timeout_duration: 300s
+      custom_tags:
+        - key: project
+          value: readmission_worklist
+        - key: env
+          value: ${var.env}
