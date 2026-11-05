@@ -32,6 +32,13 @@ from readmit.worklist.assign import assign_items
 from readmit.worklist.tables import ensure_tables, table
 
 _ENDPOINT_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+# Fail the task when more than this share of brief calls error (after saving successes).
+MAX_BRIEF_ERROR_RATE = 0.10
+# The brief budget must cover the model's hidden reasoning as well as the visible text:
+# at 300 tokens databricks-claude-opus-5-5 returned empty strings with no error.
+BRIEF_MAX_TOKENS = 2000
+# A brief shorter than this is treated as failed and regenerated on the next run.
+MIN_BRIEF_CHARS = 80
 
 
 def _active_on(df: DataFrame, d: date) -> DataFrame:
@@ -141,13 +148,17 @@ def _prompt() -> F.Column:
     )
 
 
+def _missing_brief(col: F.Column) -> F.Column:
+    return col.isNull() | (F.length(F.trim(col)) < MIN_BRIEF_CHARS)
+
+
 def generate_briefs(spark: SparkSession, catalog: str, endpoint: str, since: date, process: str) -> dict:
     if not _ENDPOINT_NAME.match(endpoint):
         raise ValueError(f"Invalid serving endpoint name: {endpoint!r}")
     target = table(catalog, "care_worklist")
     todo = (
         spark.table(target)
-        .filter(F.col("outreach_brief").isNull() & (F.col("worklist_date") >= F.lit(since)))
+        .filter(_missing_brief(F.col("outreach_brief")) & (F.col("worklist_date") >= F.lit(since)))
         .join(spark.table(f"{catalog}.readmission_worklist_gold.discharge_features")
               .select("encounter_id", "primary_condition_group", "discharge_disposition", "followup_scheduled_7d"),
               "encounter_id")
@@ -160,8 +171,9 @@ def generate_briefs(spark: SparkSession, catalog: str, endpoint: str, since: dat
         .withColumn(
             "ai",
             F.expr(
+                # Only max_tokens: some chat endpoints (e.g. databricks-claude-opus-5-5) reject temperature.
                 f"ai_query('{endpoint}', prompt, failOnError => false, "
-                "modelParameters => named_struct('temperature', CAST(0.2 AS DOUBLE), 'max_tokens', 300))"
+                f"modelParameters => named_struct('max_tokens', {BRIEF_MAX_TOKENS}))"
             ),
         )
     )
@@ -174,18 +186,24 @@ def generate_briefs(spark: SparkSession, catalog: str, endpoint: str, since: dat
     )
     # Materialize once: each row is one billed LLM call.
     results = answered.toPandas()
-    ok = results[results["brief"].notna()]
+    usable = results["brief"].fillna("").str.strip().str.len() >= MIN_BRIEF_CHARS
+    results.loc[~usable & results["error"].fillna("").eq(""), "error"] = "empty or truncated response"
+    ok = results[usable]
     if len(ok):
         spark.createDataFrame(ok[["worklist_item_id", "brief"]]).createOrReplaceTempView("_briefs")
         spark.sql(
             f"MERGE INTO {target} t USING _briefs s ON t.worklist_item_id = s.worklist_item_id "
-            "WHEN MATCHED AND t.outreach_brief IS NULL THEN UPDATE SET t.outreach_brief = s.brief, "
+            f"WHEN MATCHED AND (t.outreach_brief IS NULL OR length(trim(t.outreach_brief)) < {MIN_BRIEF_CHARS}) "
+            "THEN UPDATE SET t.outreach_brief = s.brief, "
             f"t.audit_updated_at = current_timestamp(), t.audit_updated_by = current_user(), "
             f"t.audit_updated_process = '{process}', t.audit_updated_run_id = 'briefs:{date.today().isoformat()}'"
         )
-    errors = results[results["brief"].isna()]["error"].dropna().head(3).tolist()
-    return {"briefs_requested": pending, "briefs_written": len(ok), "brief_errors": len(results) - len(ok),
-            "sample_errors": errors}
+    errors = results[~usable]["error"].dropna().head(3).tolist()
+    outcome = {"briefs_requested": pending, "briefs_written": len(ok), "brief_errors": len(results) - len(ok),
+               "sample_errors": errors}
+    if outcome["brief_errors"] > MAX_BRIEF_ERROR_RATE * len(results):
+        raise RuntimeError(f"Outreach brief generation failed for too many items: {outcome}")
+    return outcome
 
 
 def pending_worklist_dates(spark: SparkSession, catalog: str, go_live: date, run_date: date) -> list[date]:

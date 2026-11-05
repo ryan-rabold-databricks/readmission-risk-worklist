@@ -1,0 +1,20 @@
+# dev_readmit_daily_cycle run 1029162361016116 | SUCCESS | 2026-11-05T18:56:21.514000+00:00
+#   task score_discharges SUCCESS run 679710663130733 0.9 min
+#   task ingest_curate SUCCESS run 690249050709464 1.6 min
+#   task build_worklist SUCCESS run 781836986391617 6.1 min
+All worklist days are already scored; nothing to do.
+{'briefs_requested': 691, 'briefs_written': 691, 'brief_errors': 0, 'sample_errors': []}
+
+----
+
+# dev_readmit_daily_cycle run 217079371241473 | SUCCESS | 2026-11-05T19:07:47.163000+00:00
+#   task score_discharges SUCCESS run 445211956038273 1.1 min
+#   task ingest_curate SUCCESS run 213268125277905 1.7 min
+#   task build_worklist SUCCESS run 972638630704614 11.8 min
+All worklist days are already scored; nothing to do.
+{'briefs_requested': 691, 'briefs_written': 691, 'brief_errors': 0, 'sample_errors': []}
+
+----
+
+Note: run 1029162361016116 reported 691 briefs written, but 690 were empty strings (max_tokens 300).
+The code now treats briefs under 80 characters as failed and regenerates them; run 217079371241473 rewrote all 691.

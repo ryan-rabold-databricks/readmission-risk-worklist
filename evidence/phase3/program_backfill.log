@@ -1,0 +1,681 @@
+# dev_readmit_program_backfill run 115414619554499 | task run 502964679105439
+# result: FAILED | 2026-11-05T17:17:27.072000+00:00 | duration_min: 66.8
+# error: [FIELD_NOT_FOUND] No such struct field `response` in `result`, `errorMessage`. SQLSTATE: 42704
+
+== Month starting 2026-05-01: monthly retrain as of 2026-05-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v3 as_of=2026-05-01 (reused existing version)
+promoted=True champion=v3
+rows: {'train': 11761, 'validation': 3142, 'test': 9944}  windows: {'train': '2025-11-01..2026-01-11', 'validation': '2026-01-12..2026-01-29', 'test': '2026-01-30..2026-03-31'}
+test AUC=0.7498 Brier=0.11881 calibration slope=1.064 intercept=0.001 observed=16.030% mean_predicted=17.065%
+gate: AUC 0.7498 >= minimum 0.68
+gate: calibration slope 1.064 inside [0.8, 1.2]
+decile | n | mean_predicted | observed_rate
+     1 |   995 | 0.051 | 0.045
+     2 |   995 | 0.065 | 0.045
+     3 |   995 | 0.077 | 0.056
+     4 |   995 | 0.090 | 0.079
+     5 |   994 | 0.105 | 0.095
+     6 |   994 | 0.127 | 0.102
+     7 |   994 | 0.169 | 0.199
+     8 |   994 | 0.242 | 0.230
+     9 |   994 | 0.337 | 0.325
+    10 |   994 | 0.443 | 0.427
+2026-05-01: scored=181 v3 worklist={'worklist_date': '2026-05-01', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-05-02: scored=159 v3 worklist={'worklist_date': '2026-05-02', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-05-03: scored=104 v3 worklist={'worklist_date': '2026-05-03', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-05-04: scored=124 v3 worklist={'worklist_date': '2026-05-04', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-05-05: scored=140 v3 worklist={'worklist_date': '2026-05-05', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-05-06: scored=164 v3 worklist={'worklist_date': '2026-05-06', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-05-07: scored=164 v3 worklist={'worklist_date': '2026-05-07', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-05-08: scored=177 v3 worklist={'worklist_date': '2026-05-08', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-05-09: scored=185 v3 worklist={'worklist_date': '2026-05-09', 'items': 66, 'ASSIGNED': 50, 'OVERFLOW': 16, 'roster_capacity': 50}
+2026-05-10: scored=108 v3 worklist={'worklist_date': '2026-05-10', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-05-11: scored=109 v3 worklist={'worklist_date': '2026-05-11', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-05-12: scored=180 v3 worklist={'worklist_date': '2026-05-12', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-05-13: scored=168 v3 worklist={'worklist_date': '2026-05-13', 'items': 65, 'ASSIGNED': 50, 'OVERFLOW': 15, 'roster_capacity': 50}
+2026-05-14: scored=178 v3 worklist={'worklist_date': '2026-05-14', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-05-15: scored=196 v3 worklist={'worklist_date': '2026-05-15', 'items': 72, 'ASSIGNED': 50, 'OVERFLOW': 22, 'roster_capacity': 50}
+2026-05-16: scored=180 v3 worklist={'worklist_date': '2026-05-16', 'items': 63, 'ASSIGNED': 50, 'OVERFLOW': 13, 'roster_capacity': 50}
+2026-05-17: scored=101 v3 worklist={'worklist_date': '2026-05-17', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-05-18: scored=107 v3 worklist={'worklist_date': '2026-05-18', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-05-19: scored=177 v3 worklist={'worklist_date': '2026-05-19', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-05-20: scored=176 v3 worklist={'worklist_date': '2026-05-20', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-05-21: scored=177 v3 worklist={'worklist_date': '2026-05-21', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-05-22: scored=168 v3 worklist={'worklist_date': '2026-05-22', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-05-23: scored=165 v3 worklist={'worklist_date': '2026-05-23', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-05-24: scored=122 v3 worklist={'worklist_date': '2026-05-24', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-05-25: scored=113 v3 worklist={'worklist_date': '2026-05-25', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-05-26: scored=150 v3 worklist={'worklist_date': '2026-05-26', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-05-27: scored=177 v3 worklist={'worklist_date': '2026-05-27', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-05-28: scored=151 v3 worklist={'worklist_date': '2026-05-28', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-05-29: scored=152 v3 worklist={'worklist_date': '2026-05-29', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-05-30: scored=167 v3 worklist={'worklist_date': '2026-05-30', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-05-31: scored=122 v3 worklist={'worklist_date': '2026-05-31', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+== Month starting 2026-06-01: monthly retrain as of 2026-06-01
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🏃 View run readmission_risk_as_of_2026-06-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/3c2c3af30b1848ee95ed77787a2e7384
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v4 as_of=2026-06-01
+promoted=True champion=v4
+rows: {'train': 16049, 'validation': 4121, 'test': 9429}  windows: {'train': '2025-11-01..2026-02-05', 'validation': '2026-02-06..2026-03-01', 'test': '2026-03-02..2026-05-01'}
+test AUC=0.7515 Brier=0.11434 calibration slope=1.052 intercept=-0.027 observed=15.442% mean_predicted=16.603%
+champion v3 on same test: AUC=0.7498 Brier=0.11483
+gate: AUC 0.7515 vs champion 0.7498 (>= floor 0.7448)
+gate: Brier 0.11434 vs champion 0.11483 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   943 | 0.046 | 0.041
+     2 |   943 | 0.059 | 0.068
+     3 |   943 | 0.071 | 0.042
+     4 |   943 | 0.084 | 0.071
+     5 |   943 | 0.099 | 0.088
+     6 |   943 | 0.123 | 0.102
+     7 |   943 | 0.164 | 0.156
+     8 |   943 | 0.236 | 0.203
+     9 |   943 | 0.332 | 0.331
+    10 |   942 | 0.446 | 0.443
+2026-06-01: scored=117 v4 worklist={'worklist_date': '2026-06-01', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-06-02: scored=178 v4 worklist={'worklist_date': '2026-06-02', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-06-03: scored=172 v4 worklist={'worklist_date': '2026-06-03', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-06-04: scored=166 v4 worklist={'worklist_date': '2026-06-04', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-06-05: scored=135 v4 worklist={'worklist_date': '2026-06-05', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-06-06: scored=179 v4 worklist={'worklist_date': '2026-06-06', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+2026-06-07: scored=105 v4 worklist={'worklist_date': '2026-06-07', 'items': 33, 'ASSIGNED': 33, 'roster_capacity': 50}
+2026-06-08: scored=113 v4 worklist={'worklist_date': '2026-06-08', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-06-09: scored=152 v4 worklist={'worklist_date': '2026-06-09', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-06-10: scored=178 v4 worklist={'worklist_date': '2026-06-10', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-06-11: scored=162 v4 worklist={'worklist_date': '2026-06-11', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-06-12: scored=155 v4 worklist={'worklist_date': '2026-06-12', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-06-13: scored=159 v4 worklist={'worklist_date': '2026-06-13', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-06-14: scored=106 v4 worklist={'worklist_date': '2026-06-14', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-06-15: scored=113 v4 worklist={'worklist_date': '2026-06-15', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-06-16: scored=160 v4 worklist={'worklist_date': '2026-06-16', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-06-17: scored=159 v4 worklist={'worklist_date': '2026-06-17', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-06-18: scored=168 v4 worklist={'worklist_date': '2026-06-18', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-06-19: scored=152 v4 worklist={'worklist_date': '2026-06-19', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-06-20: scored=185 v4 worklist={'worklist_date': '2026-06-20', 'items': 65, 'ASSIGNED': 50, 'OVERFLOW': 15, 'roster_capacity': 50}
+2026-06-21: scored=114 v4 worklist={'worklist_date': '2026-06-21', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-06-22: scored=100 v4 worklist={'worklist_date': '2026-06-22', 'items': 25, 'ASSIGNED': 25, 'roster_capacity': 50}
+2026-06-23: scored=150 v4 worklist={'worklist_date': '2026-06-23', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-06-24: scored=158 v4 worklist={'worklist_date': '2026-06-24', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-06-25: scored=158 v4 worklist={'worklist_date': '2026-06-25', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-06-26: scored=140 v4 worklist={'worklist_date': '2026-06-26', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-06-27: scored=149 v4 worklist={'worklist_date': '2026-06-27', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-06-28: scored=113 v4 worklist={'worklist_date': '2026-06-28', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-06-29: scored=113 v4 worklist={'worklist_date': '2026-06-29', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-06-30: scored=176 v4 worklist={'worklist_date': '2026-06-30', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+== Month starting 2026-07-01: monthly retrain as of 2026-07-01
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🏃 View run readmission_risk_as_of_2026-07-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/9cdb4d251fc14a91af802ee359829783
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v5 as_of=2026-07-01
+promoted=True champion=v5
+rows: {'train': 19740, 'validation': 5107, 'test': 9271}  windows: {'train': '2025-11-01..2026-02-26', 'validation': '2026-02-27..2026-03-31', 'test': '2026-04-01..2026-05-31'}
+test AUC=0.7465 Brier=0.11072 calibration slope=0.996 intercept=-0.122 observed=14.734% mean_predicted=16.073%
+champion v4 on same test: AUC=0.7455 Brier=0.11104
+gate: AUC 0.7465 vs champion 0.7455 (>= floor 0.7405)
+gate: Brier 0.11072 vs champion 0.11104 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   928 | 0.041 | 0.045
+     2 |   927 | 0.053 | 0.047
+     3 |   927 | 0.064 | 0.064
+     4 |   927 | 0.077 | 0.078
+     5 |   927 | 0.093 | 0.070
+     6 |   927 | 0.117 | 0.105
+     7 |   927 | 0.160 | 0.139
+     8 |   927 | 0.232 | 0.189
+     9 |   927 | 0.324 | 0.317
+    10 |   927 | 0.446 | 0.420
+2026-07-01: scored=160 v5 worklist={'worklist_date': '2026-07-01', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-07-02: scored=158 v5 worklist={'worklist_date': '2026-07-02', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-07-03: scored=148 v5 worklist={'worklist_date': '2026-07-03', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-07-04: scored=154 v5 worklist={'worklist_date': '2026-07-04', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-07-05: scored=97 v5 worklist={'worklist_date': '2026-07-05', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-07-06: scored=122 v5 worklist={'worklist_date': '2026-07-06', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-07-07: scored=156 v5 worklist={'worklist_date': '2026-07-07', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-07-08: scored=181 v5 worklist={'worklist_date': '2026-07-08', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+2026-07-09: scored=163 v5 worklist={'worklist_date': '2026-07-09', 'items': 62, 'ASSIGNED': 50, 'OVERFLOW': 12, 'roster_capacity': 50}
+2026-07-10: scored=151 v5 worklist={'worklist_date': '2026-07-10', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-07-11: scored=139 v5 worklist={'worklist_date': '2026-07-11', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-07-12: scored=102 v5 worklist={'worklist_date': '2026-07-12', 'items': 33, 'ASSIGNED': 33, 'roster_capacity': 50}
+2026-07-13: scored=99 v5 worklist={'worklist_date': '2026-07-13', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-07-14: scored=149 v5 worklist={'worklist_date': '2026-07-14', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+2026-07-15: scored=166 v5 worklist={'worklist_date': '2026-07-15', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-07-16: scored=157 v5 worklist={'worklist_date': '2026-07-16', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-07-17: scored=147 v5 worklist={'worklist_date': '2026-07-17', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-07-18: scored=161 v5 worklist={'worklist_date': '2026-07-18', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-07-19: scored=98 v5 worklist={'worklist_date': '2026-07-19', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-07-20: scored=111 v5 worklist={'worklist_date': '2026-07-20', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-07-21: scored=157 v5 worklist={'worklist_date': '2026-07-21', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-07-22: scored=152 v5 worklist={'worklist_date': '2026-07-22', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-07-23: scored=154 v5 worklist={'worklist_date': '2026-07-23', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-07-24: scored=155 v5 worklist={'worklist_date': '2026-07-24', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-07-25: scored=155 v5 worklist={'worklist_date': '2026-07-25', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-07-26: scored=107 v5 worklist={'worklist_date': '2026-07-26', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-07-27: scored=103 v5 worklist={'worklist_date': '2026-07-27', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-07-28: scored=167 v5 worklist={'worklist_date': '2026-07-28', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-07-29: scored=167 v5 worklist={'worklist_date': '2026-07-29', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-07-30: scored=165 v5 worklist={'worklist_date': '2026-07-30', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-07-31: scored=158 v5 worklist={'worklist_date': '2026-07-31', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+== Month starting 2026-08-01: monthly retrain as of 2026-08-01
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🏃 View run readmission_risk_as_of_2026-08-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/cb7a95127ec34b91a91c898748d158b6
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v6 as_of=2026-08-01
+promoted=True champion=v6
+rows: {'train': 23613, 'validation': 5986, 'test': 9105}  windows: {'train': '2025-11-01..2026-03-23', 'validation': '2026-03-24..2026-05-01', 'test': '2026-05-02..2026-07-01'}
+test AUC=0.7526 Brier=0.11101 calibration slope=1.009 intercept=-0.104 observed=14.805% mean_predicted=16.146%
+champion v5 on same test: AUC=0.7505 Brier=0.11131
+gate: AUC 0.7526 vs champion 0.7505 (>= floor 0.7455)
+gate: Brier 0.11101 vs champion 0.11131 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   911 | 0.041 | 0.041
+     2 |   911 | 0.052 | 0.044
+     3 |   911 | 0.064 | 0.054
+     4 |   911 | 0.076 | 0.083
+     5 |   911 | 0.092 | 0.066
+     6 |   910 | 0.118 | 0.104
+     7 |   910 | 0.162 | 0.135
+     8 |   910 | 0.236 | 0.224
+     9 |   910 | 0.331 | 0.310
+    10 |   910 | 0.445 | 0.420
+2026-08-01: scored=155 v6 worklist={'worklist_date': '2026-08-01', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-08-02: scored=101 v6 worklist={'worklist_date': '2026-08-02', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-08-03: scored=103 v6 worklist={'worklist_date': '2026-08-03', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-08-04: scored=155 v6 worklist={'worklist_date': '2026-08-04', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-08-05: scored=159 v6 worklist={'worklist_date': '2026-08-05', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+2026-08-06: scored=174 v6 worklist={'worklist_date': '2026-08-06', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-08-07: scored=141 v6 worklist={'worklist_date': '2026-08-07', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-08-08: scored=139 v6 worklist={'worklist_date': '2026-08-08', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-08-09: scored=108 v6 worklist={'worklist_date': '2026-08-09', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-08-10: scored=100 v6 worklist={'worklist_date': '2026-08-10', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-08-11: scored=152 v6 worklist={'worklist_date': '2026-08-11', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-08-12: scored=158 v6 worklist={'worklist_date': '2026-08-12', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-08-13: scored=144 v6 worklist={'worklist_date': '2026-08-13', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-08-14: scored=156 v6 worklist={'worklist_date': '2026-08-14', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-08-15: scored=161 v6 worklist={'worklist_date': '2026-08-15', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-08-16: scored=104 v6 worklist={'worklist_date': '2026-08-16', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-08-17: scored=118 v6 worklist={'worklist_date': '2026-08-17', 'items': 28, 'ASSIGNED': 28, 'roster_capacity': 50}
+2026-08-18: scored=166 v6 worklist={'worklist_date': '2026-08-18', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-08-19: scored=167 v6 worklist={'worklist_date': '2026-08-19', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+2026-08-20: scored=157 v6 worklist={'worklist_date': '2026-08-20', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-08-21: scored=162 v6 worklist={'worklist_date': '2026-08-21', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-08-22: scored=155 v6 worklist={'worklist_date': '2026-08-22', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-08-23: scored=101 v6 worklist={'worklist_date': '2026-08-23', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-08-24: scored=120 v6 worklist={'worklist_date': '2026-08-24', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-08-25: scored=157 v6 worklist={'worklist_date': '2026-08-25', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-08-26: scored=165 v6 worklist={'worklist_date': '2026-08-26', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-08-27: scored=172 v6 worklist={'worklist_date': '2026-08-27', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-08-28: scored=160 v6 worklist={'worklist_date': '2026-08-28', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-08-29: scored=155 v6 worklist={'worklist_date': '2026-08-29', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-08-30: scored=104 v6 worklist={'worklist_date': '2026-08-30', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-08-31: scored=112 v6 worklist={'worklist_date': '2026-08-31', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+== Month starting 2026-09-01: monthly retrain as of 2026-09-01
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🏃 View run readmission_risk_as_of_2026-09-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/5cf0ce20c37a4700b94208532e946508
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v7 as_of=2026-09-01
+promoted=False champion=v6
+rows: {'train': 27301, 'validation': 6995, 'test': 8805}  windows: {'train': '2025-11-01..2026-04-16', 'validation': '2026-04-17..2026-06-01', 'test': '2026-06-02..2026-08-01'}
+test AUC=0.7515 Brier=0.11263 calibration slope=1.031 intercept=-0.028 observed=15.071% mean_predicted=15.895%
+champion v6 on same test: AUC=0.7522 Brier=0.11257
+gate: AUC 0.7515 vs champion 0.7522 (>= floor 0.7472)
+gate: Brier 0.11263 vs champion 0.11257 (worse)
+decile | n | mean_predicted | observed_rate
+     1 |   881 | 0.044 | 0.043
+     2 |   881 | 0.054 | 0.057
+     3 |   881 | 0.065 | 0.051
+     4 |   881 | 0.076 | 0.068
+     5 |   881 | 0.092 | 0.075
+     6 |   880 | 0.115 | 0.094
+     7 |   880 | 0.157 | 0.152
+     8 |   880 | 0.230 | 0.225
+     9 |   880 | 0.324 | 0.326
+    10 |   880 | 0.432 | 0.416
+2026-09-01: scored=164 v6 worklist={'worklist_date': '2026-09-01', 'items': 62, 'ASSIGNED': 50, 'OVERFLOW': 12, 'roster_capacity': 50}
+2026-09-02: scored=164 v6 worklist={'worklist_date': '2026-09-02', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-09-03: scored=160 v6 worklist={'worklist_date': '2026-09-03', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-09-04: scored=184 v6 worklist={'worklist_date': '2026-09-04', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-09-05: scored=181 v6 worklist={'worklist_date': '2026-09-05', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-09-06: scored=115 v6 worklist={'worklist_date': '2026-09-06', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-09-07: scored=99 v6 worklist={'worklist_date': '2026-09-07', 'items': 29, 'ASSIGNED': 29, 'roster_capacity': 50}
+2026-09-08: scored=157 v6 worklist={'worklist_date': '2026-09-08', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-09-09: scored=183 v6 worklist={'worklist_date': '2026-09-09', 'items': 64, 'ASSIGNED': 50, 'OVERFLOW': 14, 'roster_capacity': 50}
+2026-09-10: scored=160 v6 worklist={'worklist_date': '2026-09-10', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-09-11: scored=167 v6 worklist={'worklist_date': '2026-09-11', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-09-12: scored=168 v6 worklist={'worklist_date': '2026-09-12', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-09-13: scored=112 v6 worklist={'worklist_date': '2026-09-13', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-09-14: scored=102 v6 worklist={'worklist_date': '2026-09-14', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+2026-09-15: scored=168 v6 worklist={'worklist_date': '2026-09-15', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-09-16: scored=155 v6 worklist={'worklist_date': '2026-09-16', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-09-17: scored=137 v6 worklist={'worklist_date': '2026-09-17', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-09-18: scored=175 v6 worklist={'worklist_date': '2026-09-18', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-09-19: scored=173 v6 worklist={'worklist_date': '2026-09-19', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-09-20: scored=120 v6 worklist={'worklist_date': '2026-09-20', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-09-21: scored=106 v6 worklist={'worklist_date': '2026-09-21', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-09-22: scored=161 v6 worklist={'worklist_date': '2026-09-22', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-09-23: scored=158 v6 worklist={'worklist_date': '2026-09-23', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-09-24: scored=185 v6 worklist={'worklist_date': '2026-09-24', 'items': 63, 'ASSIGNED': 50, 'OVERFLOW': 13, 'roster_capacity': 50}
+2026-09-25: scored=181 v6 worklist={'worklist_date': '2026-09-25', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-09-26: scored=191 v6 worklist={'worklist_date': '2026-09-26', 'items': 63, 'ASSIGNED': 50, 'OVERFLOW': 13, 'roster_capacity': 50}
+2026-09-27: scored=115 v6 worklist={'worklist_date': '2026-09-27', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-09-28: scored=96 v6 worklist={'worklist_date': '2026-09-28', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-09-29: scored=184 v6 worklist={'worklist_date': '2026-09-29', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-09-30: scored=159 v6 worklist={'worklist_date': '2026-09-30', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+== Month starting 2026-10-01: monthly retrain as of 2026-10-01
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🏃 View run readmission_risk_as_of_2026-10-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/6f897b1295cf417caca74c8797061b12
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v8 as_of=2026-10-01
+promoted=True champion=v8
+rows: {'train': 30874, 'validation': 7830, 'test': 8686}  windows: {'train': '2025-11-01..2026-05-10', 'validation': '2026-05-11..2026-07-01', 'test': '2026-07-02..2026-08-31'}
+test AUC=0.7475 Brier=0.11515 calibration slope=0.993 intercept=-0.026 observed=15.450% mean_predicted=15.642%
+champion v6 on same test: AUC=0.7470 Brier=0.11523
+gate: AUC 0.7475 vs champion 0.7470 (>= floor 0.7420)
+gate: Brier 0.11515 vs champion 0.11523 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   869 | 0.043 | 0.044
+     2 |   869 | 0.052 | 0.056
+     3 |   869 | 0.062 | 0.054
+     4 |   869 | 0.074 | 0.071
+     5 |   869 | 0.089 | 0.089
+     6 |   869 | 0.112 | 0.108
+     7 |   868 | 0.153 | 0.159
+     8 |   868 | 0.225 | 0.210
+     9 |   868 | 0.318 | 0.325
+    10 |   868 | 0.436 | 0.430
+2026-10-01: scored=190 v8 worklist={'worklist_date': '2026-10-01', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-10-02: scored=158 v8 worklist={'worklist_date': '2026-10-02', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-10-03: scored=175 v8 worklist={'worklist_date': '2026-10-03', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-10-04: scored=108 v8 worklist={'worklist_date': '2026-10-04', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-10-05: scored=117 v8 worklist={'worklist_date': '2026-10-05', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-10-06: scored=196 v8 worklist={'worklist_date': '2026-10-06', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-10-07: scored=195 v8 worklist={'worklist_date': '2026-10-07', 'items': 62, 'ASSIGNED': 50, 'OVERFLOW': 12, 'roster_capacity': 50}
+2026-10-08: scored=165 v8 worklist={'worklist_date': '2026-10-08', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-10-09: scored=202 v8 worklist={'worklist_date': '2026-10-09', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-10-10: scored=165 v8 worklist={'worklist_date': '2026-10-10', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-10-11: scored=116 v8 worklist={'worklist_date': '2026-10-11', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-10-12: scored=127 v8 worklist={'worklist_date': '2026-10-12', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-10-13: scored=168 v8 worklist={'worklist_date': '2026-10-13', 'items': 62, 'ASSIGNED': 50, 'OVERFLOW': 12, 'roster_capacity': 50}
+2026-10-14: scored=179 v8 worklist={'worklist_date': '2026-10-14', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-10-15: scored=196 v8 worklist={'worklist_date': '2026-10-15', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-10-16: scored=155 v8 worklist={'worklist_date': '2026-10-16', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-10-17: scored=163 v8 worklist={'worklist_date': '2026-10-17', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-10-18: scored=113 v8 worklist={'worklist_date': '2026-10-18', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-10-19: scored=129 v8 worklist={'worklist_date': '2026-10-19', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-10-20: scored=167 v8 worklist={'worklist_date': '2026-10-20', 'items': 60, 'ASSIGNED': 50, 'OVERFLOW': 10, 'roster_capacity': 50}
+2026-10-21: scored=140 v8 worklist={'worklist_date': '2026-10-21', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-10-22: scored=157 v8 worklist={'worklist_date': '2026-10-22', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-10-23: scored=187 v8 worklist={'worklist_date': '2026-10-23', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-10-24: scored=154 v8 worklist={'worklist_date': '2026-10-24', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-10-25: scored=105 v8 worklist={'worklist_date': '2026-10-25', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-10-26: scored=103 v8 worklist={'worklist_date': '2026-10-26', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-10-27: scored=184 v8 worklist={'worklist_date': '2026-10-27', 'items': 63, 'ASSIGNED': 50, 'OVERFLOW': 13, 'roster_capacity': 50}
+2026-10-28: scored=161 v8 worklist={'worklist_date': '2026-10-28', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-10-29: scored=171 v8 worklist={'worklist_date': '2026-10-29', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-10-30: scored=146 v8 worklist={'worklist_date': '2026-10-30', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-10-31: scored=173 v8 worklist={'worklist_date': '2026-10-31', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+== Month starting 2026-11-01: monthly retrain as of 2026-11-01
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🏃 View run readmission_risk_as_of_2026-11-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/b942fa21483e40138f95ae5b34e3f90b
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v9 as_of=2026-11-01
+promoted=True champion=v9
+rows: {'train': 34468, 'validation': 8633, 'test': 9053}  windows: {'train': '2025-11-01..2026-06-02', 'validation': '2026-06-03..2026-08-01', 'test': '2026-08-02..2026-10-01'}
+test AUC=0.7554 Brier=0.11318 calibration slope=1.037 intercept=0.041 observed=15.398% mean_predicted=15.528%
+champion v8 on same test: AUC=0.7548 Brier=0.11328
+gate: AUC 0.7554 vs champion 0.7548 (>= floor 0.7498)
+gate: Brier 0.11318 vs champion 0.11328 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   906 | 0.042 | 0.042
+     2 |   906 | 0.052 | 0.051
+     3 |   906 | 0.063 | 0.056
+     4 |   905 | 0.074 | 0.071
+     5 |   905 | 0.087 | 0.096
+     6 |   905 | 0.111 | 0.086
+     7 |   905 | 0.151 | 0.149
+     8 |   905 | 0.220 | 0.218
+     9 |   905 | 0.316 | 0.316
+    10 |   905 | 0.438 | 0.455
+2026-11-01: scored=116 v9 worklist={'worklist_date': '2026-11-01', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-11-02: scored=114 v9 worklist={'worklist_date': '2026-11-02', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-11-03: scored=159 v9 worklist={'worklist_date': '2026-11-03', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-11-04: scored=176 v9 worklist={'worklist_date': '2026-11-04', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-11-05: scored=171 v9 worklist={'worklist_date': '2026-11-05', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+
+----
+
+# dev_readmit_program_backfill run 560385146091070 | task run 735158880450850
+# result: SUCCESS | 2026-11-05T18:26:50.339000+00:00 | duration_min: 28.0
+
+== Month starting 2026-05-01: monthly retrain as of 2026-05-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v3 as_of=2026-05-01 (reused existing version)
+promoted=True champion=v9
+rows: {'train': 11761, 'validation': 3142, 'test': 9944}  windows: {'train': '2025-11-01..2026-01-11', 'validation': '2026-01-12..2026-01-29', 'test': '2026-01-30..2026-03-31'}
+test AUC=0.7498 Brier=0.11881 calibration slope=1.064 intercept=0.001 observed=16.030% mean_predicted=17.065%
+gate: AUC 0.7498 >= minimum 0.68
+gate: calibration slope 1.064 inside [0.8, 1.2]
+decile | n | mean_predicted | observed_rate
+     1 |   995 | 0.051 | 0.045
+     2 |   995 | 0.065 | 0.045
+     3 |   995 | 0.077 | 0.056
+     4 |   995 | 0.090 | 0.079
+     5 |   994 | 0.105 | 0.095
+     6 |   994 | 0.127 | 0.102
+     7 |   994 | 0.169 | 0.199
+     8 |   994 | 0.242 | 0.230
+     9 |   994 | 0.337 | 0.325
+    10 |   994 | 0.443 | 0.427
+then-current champion for 2026-05-01: v3
+2026-05-01: scored=0 v3 worklist={'worklist_date': '2026-05-01', 'skipped': 'already built'}
+2026-05-02: scored=0 v3 worklist={'worklist_date': '2026-05-02', 'skipped': 'already built'}
+2026-05-03: scored=0 v3 worklist={'worklist_date': '2026-05-03', 'skipped': 'already built'}
+2026-05-04: scored=0 v3 worklist={'worklist_date': '2026-05-04', 'skipped': 'already built'}
+2026-05-05: scored=0 v3 worklist={'worklist_date': '2026-05-05', 'skipped': 'already built'}
+2026-05-06: scored=0 v3 worklist={'worklist_date': '2026-05-06', 'skipped': 'already built'}
+2026-05-07: scored=0 v3 worklist={'worklist_date': '2026-05-07', 'skipped': 'already built'}
+2026-05-08: scored=0 v3 worklist={'worklist_date': '2026-05-08', 'skipped': 'already built'}
+2026-05-09: scored=0 v3 worklist={'worklist_date': '2026-05-09', 'skipped': 'already built'}
+2026-05-10: scored=0 v3 worklist={'worklist_date': '2026-05-10', 'skipped': 'already built'}
+2026-05-11: scored=0 v3 worklist={'worklist_date': '2026-05-11', 'skipped': 'already built'}
+2026-05-12: scored=0 v3 worklist={'worklist_date': '2026-05-12', 'skipped': 'already built'}
+2026-05-13: scored=0 v3 worklist={'worklist_date': '2026-05-13', 'skipped': 'already built'}
+2026-05-14: scored=0 v3 worklist={'worklist_date': '2026-05-14', 'skipped': 'already built'}
+2026-05-15: scored=0 v3 worklist={'worklist_date': '2026-05-15', 'skipped': 'already built'}
+2026-05-16: scored=0 v3 worklist={'worklist_date': '2026-05-16', 'skipped': 'already built'}
+2026-05-17: scored=0 v3 worklist={'worklist_date': '2026-05-17', 'skipped': 'already built'}
+2026-05-18: scored=0 v3 worklist={'worklist_date': '2026-05-18', 'skipped': 'already built'}
+2026-05-19: scored=0 v3 worklist={'worklist_date': '2026-05-19', 'skipped': 'already built'}
+2026-05-20: scored=0 v3 worklist={'worklist_date': '2026-05-20', 'skipped': 'already built'}
+2026-05-21: scored=0 v3 worklist={'worklist_date': '2026-05-21', 'skipped': 'already built'}
+2026-05-22: scored=0 v3 worklist={'worklist_date': '2026-05-22', 'skipped': 'already built'}
+2026-05-23: scored=0 v3 worklist={'worklist_date': '2026-05-23', 'skipped': 'already built'}
+2026-05-24: scored=0 v3 worklist={'worklist_date': '2026-05-24', 'skipped': 'already built'}
+2026-05-25: scored=0 v3 worklist={'worklist_date': '2026-05-25', 'skipped': 'already built'}
+2026-05-26: scored=0 v3 worklist={'worklist_date': '2026-05-26', 'skipped': 'already built'}
+2026-05-27: scored=0 v3 worklist={'worklist_date': '2026-05-27', 'skipped': 'already built'}
+2026-05-28: scored=0 v3 worklist={'worklist_date': '2026-05-28', 'skipped': 'already built'}
+2026-05-29: scored=0 v3 worklist={'worklist_date': '2026-05-29', 'skipped': 'already built'}
+2026-05-30: scored=0 v3 worklist={'worklist_date': '2026-05-30', 'skipped': 'already built'}
+2026-05-31: scored=0 v3 worklist={'worklist_date': '2026-05-31', 'skipped': 'already built'}
+== Month starting 2026-06-01: monthly retrain as of 2026-06-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v4 as_of=2026-06-01 (reused existing version)
+promoted=True champion=v9
+rows: {'train': 16049, 'validation': 4121, 'test': 9429}  windows: {'train': '2025-11-01..2026-02-05', 'validation': '2026-02-06..2026-03-01', 'test': '2026-03-02..2026-05-01'}
+test AUC=0.7515 Brier=0.11434 calibration slope=1.052 intercept=-0.027 observed=15.442% mean_predicted=16.603%
+champion v3 on same test: AUC=0.7498 Brier=0.11483
+gate: AUC 0.7515 vs champion 0.7498 (>= floor 0.7448)
+gate: Brier 0.11434 vs champion 0.11483 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   943 | 0.046 | 0.041
+     2 |   943 | 0.059 | 0.068
+     3 |   943 | 0.071 | 0.042
+     4 |   943 | 0.084 | 0.071
+     5 |   943 | 0.099 | 0.088
+     6 |   943 | 0.123 | 0.102
+     7 |   943 | 0.164 | 0.156
+     8 |   943 | 0.236 | 0.203
+     9 |   943 | 0.332 | 0.331
+    10 |   942 | 0.446 | 0.443
+then-current champion for 2026-06-01: v4
+2026-06-01: scored=0 v4 worklist={'worklist_date': '2026-06-01', 'skipped': 'already built'}
+2026-06-02: scored=0 v4 worklist={'worklist_date': '2026-06-02', 'skipped': 'already built'}
+2026-06-03: scored=0 v4 worklist={'worklist_date': '2026-06-03', 'skipped': 'already built'}
+2026-06-04: scored=0 v4 worklist={'worklist_date': '2026-06-04', 'skipped': 'already built'}
+2026-06-05: scored=0 v4 worklist={'worklist_date': '2026-06-05', 'skipped': 'already built'}
+2026-06-06: scored=0 v4 worklist={'worklist_date': '2026-06-06', 'skipped': 'already built'}
+2026-06-07: scored=0 v4 worklist={'worklist_date': '2026-06-07', 'skipped': 'already built'}
+2026-06-08: scored=0 v4 worklist={'worklist_date': '2026-06-08', 'skipped': 'already built'}
+2026-06-09: scored=0 v4 worklist={'worklist_date': '2026-06-09', 'skipped': 'already built'}
+2026-06-10: scored=0 v4 worklist={'worklist_date': '2026-06-10', 'skipped': 'already built'}
+2026-06-11: scored=0 v4 worklist={'worklist_date': '2026-06-11', 'skipped': 'already built'}
+2026-06-12: scored=0 v4 worklist={'worklist_date': '2026-06-12', 'skipped': 'already built'}
+2026-06-13: scored=0 v4 worklist={'worklist_date': '2026-06-13', 'skipped': 'already built'}
+2026-06-14: scored=0 v4 worklist={'worklist_date': '2026-06-14', 'skipped': 'already built'}
+2026-06-15: scored=0 v4 worklist={'worklist_date': '2026-06-15', 'skipped': 'already built'}
+2026-06-16: scored=0 v4 worklist={'worklist_date': '2026-06-16', 'skipped': 'already built'}
+2026-06-17: scored=0 v4 worklist={'worklist_date': '2026-06-17', 'skipped': 'already built'}
+2026-06-18: scored=0 v4 worklist={'worklist_date': '2026-06-18', 'skipped': 'already built'}
+2026-06-19: scored=0 v4 worklist={'worklist_date': '2026-06-19', 'skipped': 'already built'}
+2026-06-20: scored=0 v4 worklist={'worklist_date': '2026-06-20', 'skipped': 'already built'}
+2026-06-21: scored=0 v4 worklist={'worklist_date': '2026-06-21', 'skipped': 'already built'}
+2026-06-22: scored=0 v4 worklist={'worklist_date': '2026-06-22', 'skipped': 'already built'}
+2026-06-23: scored=0 v4 worklist={'worklist_date': '2026-06-23', 'skipped': 'already built'}
+2026-06-24: scored=0 v4 worklist={'worklist_date': '2026-06-24', 'skipped': 'already built'}
+2026-06-25: scored=0 v4 worklist={'worklist_date': '2026-06-25', 'skipped': 'already built'}
+2026-06-26: scored=0 v4 worklist={'worklist_date': '2026-06-26', 'skipped': 'already built'}
+2026-06-27: scored=0 v4 worklist={'worklist_date': '2026-06-27', 'skipped': 'already built'}
+2026-06-28: scored=0 v4 worklist={'worklist_date': '2026-06-28', 'skipped': 'already built'}
+2026-06-29: scored=0 v4 worklist={'worklist_date': '2026-06-29', 'skipped': 'already built'}
+2026-06-30: scored=0 v4 worklist={'worklist_date': '2026-06-30', 'skipped': 'already built'}
+== Month starting 2026-07-01: monthly retrain as of 2026-07-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v5 as_of=2026-07-01 (reused existing version)
+promoted=True champion=v9
+rows: {'train': 19740, 'validation': 5107, 'test': 9271}  windows: {'train': '2025-11-01..2026-02-26', 'validation': '2026-02-27..2026-03-31', 'test': '2026-04-01..2026-05-31'}
+test AUC=0.7465 Brier=0.11072 calibration slope=0.996 intercept=-0.122 observed=14.734% mean_predicted=16.073%
+champion v4 on same test: AUC=0.7455 Brier=0.11104
+gate: AUC 0.7465 vs champion 0.7455 (>= floor 0.7405)
+gate: Brier 0.11072 vs champion 0.11104 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   928 | 0.041 | 0.045
+     2 |   927 | 0.053 | 0.047
+     3 |   927 | 0.064 | 0.064
+     4 |   927 | 0.077 | 0.078
+     5 |   927 | 0.093 | 0.070
+     6 |   927 | 0.117 | 0.105
+     7 |   927 | 0.160 | 0.139
+     8 |   927 | 0.232 | 0.189
+     9 |   927 | 0.324 | 0.317
+    10 |   927 | 0.446 | 0.420
+then-current champion for 2026-07-01: v5
+2026-07-01: scored=0 v5 worklist={'worklist_date': '2026-07-01', 'skipped': 'already built'}
+2026-07-02: scored=0 v5 worklist={'worklist_date': '2026-07-02', 'skipped': 'already built'}
+2026-07-03: scored=0 v5 worklist={'worklist_date': '2026-07-03', 'skipped': 'already built'}
+2026-07-04: scored=0 v5 worklist={'worklist_date': '2026-07-04', 'skipped': 'already built'}
+2026-07-05: scored=0 v5 worklist={'worklist_date': '2026-07-05', 'skipped': 'already built'}
+2026-07-06: scored=0 v5 worklist={'worklist_date': '2026-07-06', 'skipped': 'already built'}
+2026-07-07: scored=0 v5 worklist={'worklist_date': '2026-07-07', 'skipped': 'already built'}
+2026-07-08: scored=0 v5 worklist={'worklist_date': '2026-07-08', 'skipped': 'already built'}
+2026-07-09: scored=0 v5 worklist={'worklist_date': '2026-07-09', 'skipped': 'already built'}
+2026-07-10: scored=0 v5 worklist={'worklist_date': '2026-07-10', 'skipped': 'already built'}
+2026-07-11: scored=0 v5 worklist={'worklist_date': '2026-07-11', 'skipped': 'already built'}
+2026-07-12: scored=0 v5 worklist={'worklist_date': '2026-07-12', 'skipped': 'already built'}
+2026-07-13: scored=0 v5 worklist={'worklist_date': '2026-07-13', 'skipped': 'already built'}
+2026-07-14: scored=0 v5 worklist={'worklist_date': '2026-07-14', 'skipped': 'already built'}
+2026-07-15: scored=0 v5 worklist={'worklist_date': '2026-07-15', 'skipped': 'already built'}
+2026-07-16: scored=0 v5 worklist={'worklist_date': '2026-07-16', 'skipped': 'already built'}
+2026-07-17: scored=0 v5 worklist={'worklist_date': '2026-07-17', 'skipped': 'already built'}
+2026-07-18: scored=0 v5 worklist={'worklist_date': '2026-07-18', 'skipped': 'already built'}
+2026-07-19: scored=0 v5 worklist={'worklist_date': '2026-07-19', 'skipped': 'already built'}
+2026-07-20: scored=0 v5 worklist={'worklist_date': '2026-07-20', 'skipped': 'already built'}
+2026-07-21: scored=0 v5 worklist={'worklist_date': '2026-07-21', 'skipped': 'already built'}
+2026-07-22: scored=0 v5 worklist={'worklist_date': '2026-07-22', 'skipped': 'already built'}
+2026-07-23: scored=0 v5 worklist={'worklist_date': '2026-07-23', 'skipped': 'already built'}
+2026-07-24: scored=0 v5 worklist={'worklist_date': '2026-07-24', 'skipped': 'already built'}
+2026-07-25: scored=0 v5 worklist={'worklist_date': '2026-07-25', 'skipped': 'already built'}
+2026-07-26: scored=0 v5 worklist={'worklist_date': '2026-07-26', 'skipped': 'already built'}
+2026-07-27: scored=0 v5 worklist={'worklist_date': '2026-07-27', 'skipped': 'already built'}
+2026-07-28: scored=0 v5 worklist={'worklist_date': '2026-07-28', 'skipped': 'already built'}
+2026-07-29: scored=0 v5 worklist={'worklist_date': '2026-07-29', 'skipped': 'already built'}
+2026-07-30: scored=0 v5 worklist={'worklist_date': '2026-07-30', 'skipped': 'already built'}
+2026-07-31: scored=0 v5 worklist={'worklist_date': '2026-07-31', 'skipped': 'already built'}
+== Month starting 2026-08-01: monthly retrain as of 2026-08-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v6 as_of=2026-08-01 (reused existing version)
+promoted=True champion=v9
+rows: {'train': 23613, 'validation': 5986, 'test': 9105}  windows: {'train': '2025-11-01..2026-03-23', 'validation': '2026-03-24..2026-05-01', 'test': '2026-05-02..2026-07-01'}
+test AUC=0.7526 Brier=0.11101 calibration slope=1.009 intercept=-0.104 observed=14.805% mean_predicted=16.146%
+champion v5 on same test: AUC=0.7505 Brier=0.11131
+gate: AUC 0.7526 vs champion 0.7505 (>= floor 0.7455)
+gate: Brier 0.11101 vs champion 0.11131 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   911 | 0.041 | 0.041
+     2 |   911 | 0.052 | 0.044
+     3 |   911 | 0.064 | 0.054
+     4 |   911 | 0.076 | 0.083
+     5 |   911 | 0.092 | 0.066
+     6 |   910 | 0.118 | 0.104
+     7 |   910 | 0.162 | 0.135
+     8 |   910 | 0.236 | 0.224
+     9 |   910 | 0.331 | 0.310
+    10 |   910 | 0.445 | 0.420
+then-current champion for 2026-08-01: v6
+2026-08-01: scored=0 v6 worklist={'worklist_date': '2026-08-01', 'skipped': 'already built'}
+2026-08-02: scored=0 v6 worklist={'worklist_date': '2026-08-02', 'skipped': 'already built'}
+2026-08-03: scored=0 v6 worklist={'worklist_date': '2026-08-03', 'skipped': 'already built'}
+2026-08-04: scored=0 v6 worklist={'worklist_date': '2026-08-04', 'skipped': 'already built'}
+2026-08-05: scored=0 v6 worklist={'worklist_date': '2026-08-05', 'skipped': 'already built'}
+2026-08-06: scored=0 v6 worklist={'worklist_date': '2026-08-06', 'skipped': 'already built'}
+2026-08-07: scored=0 v6 worklist={'worklist_date': '2026-08-07', 'skipped': 'already built'}
+2026-08-08: scored=0 v6 worklist={'worklist_date': '2026-08-08', 'skipped': 'already built'}
+2026-08-09: scored=0 v6 worklist={'worklist_date': '2026-08-09', 'skipped': 'already built'}
+2026-08-10: scored=0 v6 worklist={'worklist_date': '2026-08-10', 'skipped': 'already built'}
+2026-08-11: scored=0 v6 worklist={'worklist_date': '2026-08-11', 'skipped': 'already built'}
+2026-08-12: scored=0 v6 worklist={'worklist_date': '2026-08-12', 'skipped': 'already built'}
+2026-08-13: scored=0 v6 worklist={'worklist_date': '2026-08-13', 'skipped': 'already built'}
+2026-08-14: scored=0 v6 worklist={'worklist_date': '2026-08-14', 'skipped': 'already built'}
+2026-08-15: scored=0 v6 worklist={'worklist_date': '2026-08-15', 'skipped': 'already built'}
+2026-08-16: scored=0 v6 worklist={'worklist_date': '2026-08-16', 'skipped': 'already built'}
+2026-08-17: scored=0 v6 worklist={'worklist_date': '2026-08-17', 'skipped': 'already built'}
+2026-08-18: scored=0 v6 worklist={'worklist_date': '2026-08-18', 'skipped': 'already built'}
+2026-08-19: scored=0 v6 worklist={'worklist_date': '2026-08-19', 'skipped': 'already built'}
+2026-08-20: scored=0 v6 worklist={'worklist_date': '2026-08-20', 'skipped': 'already built'}
+2026-08-21: scored=0 v6 worklist={'worklist_date': '2026-08-21', 'skipped': 'already built'}
+2026-08-22: scored=0 v6 worklist={'worklist_date': '2026-08-22', 'skipped': 'already built'}
+2026-08-23: scored=0 v6 worklist={'worklist_date': '2026-08-23', 'skipped': 'already built'}
+2026-08-24: scored=0 v6 worklist={'worklist_date': '2026-08-24', 'skipped': 'already built'}
+2026-08-25: scored=0 v6 worklist={'worklist_date': '2026-08-25', 'skipped': 'already built'}
+2026-08-26: scored=0 v6 worklist={'worklist_date': '2026-08-26', 'skipped': 'already built'}
+2026-08-27: scored=0 v6 worklist={'worklist_date': '2026-08-27', 'skipped': 'already built'}
+2026-08-28: scored=0 v6 worklist={'worklist_date': '2026-08-28', 'skipped': 'already built'}
+2026-08-29: scored=0 v6 worklist={'worklist_date': '2026-08-29', 'skipped': 'already built'}
+2026-08-30: scored=0 v6 worklist={'worklist_date': '2026-08-30', 'skipped': 'already built'}
+2026-08-31: scored=0 v6 worklist={'worklist_date': '2026-08-31', 'skipped': 'already built'}
+== Month starting 2026-09-01: monthly retrain as of 2026-09-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v7 as_of=2026-09-01 (reused existing version)
+promoted=False champion=v9
+rows: {'train': 27301, 'validation': 6995, 'test': 8805}  windows: {'train': '2025-11-01..2026-04-16', 'validation': '2026-04-17..2026-06-01', 'test': '2026-06-02..2026-08-01'}
+test AUC=0.7515 Brier=0.11263 calibration slope=1.031 intercept=-0.028 observed=15.071% mean_predicted=15.895%
+champion v6 on same test: AUC=0.7522 Brier=0.11257
+gate: AUC 0.7515 vs champion 0.7522 (>= floor 0.7472)
+gate: Brier 0.11263 vs champion 0.11257 (worse)
+decile | n | mean_predicted | observed_rate
+     1 |   881 | 0.044 | 0.043
+     2 |   881 | 0.054 | 0.057
+     3 |   881 | 0.065 | 0.051
+     4 |   881 | 0.076 | 0.068
+     5 |   881 | 0.092 | 0.075
+     6 |   880 | 0.115 | 0.094
+     7 |   880 | 0.157 | 0.152
+     8 |   880 | 0.230 | 0.225
+     9 |   880 | 0.324 | 0.326
+    10 |   880 | 0.432 | 0.416
+then-current champion for 2026-09-01: v6
+2026-09-01: scored=0 v6 worklist={'worklist_date': '2026-09-01', 'skipped': 'already built'}
+2026-09-02: scored=0 v6 worklist={'worklist_date': '2026-09-02', 'skipped': 'already built'}
+2026-09-03: scored=0 v6 worklist={'worklist_date': '2026-09-03', 'skipped': 'already built'}
+2026-09-04: scored=0 v6 worklist={'worklist_date': '2026-09-04', 'skipped': 'already built'}
+2026-09-05: scored=0 v6 worklist={'worklist_date': '2026-09-05', 'skipped': 'already built'}
+2026-09-06: scored=0 v6 worklist={'worklist_date': '2026-09-06', 'skipped': 'already built'}
+2026-09-07: scored=0 v6 worklist={'worklist_date': '2026-09-07', 'skipped': 'already built'}
+2026-09-08: scored=0 v6 worklist={'worklist_date': '2026-09-08', 'skipped': 'already built'}
+2026-09-09: scored=0 v6 worklist={'worklist_date': '2026-09-09', 'skipped': 'already built'}
+2026-09-10: scored=0 v6 worklist={'worklist_date': '2026-09-10', 'skipped': 'already built'}
+2026-09-11: scored=0 v6 worklist={'worklist_date': '2026-09-11', 'skipped': 'already built'}
+2026-09-12: scored=0 v6 worklist={'worklist_date': '2026-09-12', 'skipped': 'already built'}
+2026-09-13: scored=0 v6 worklist={'worklist_date': '2026-09-13', 'skipped': 'already built'}
+2026-09-14: scored=0 v6 worklist={'worklist_date': '2026-09-14', 'skipped': 'already built'}
+2026-09-15: scored=0 v6 worklist={'worklist_date': '2026-09-15', 'skipped': 'already built'}
+2026-09-16: scored=0 v6 worklist={'worklist_date': '2026-09-16', 'skipped': 'already built'}
+2026-09-17: scored=0 v6 worklist={'worklist_date': '2026-09-17', 'skipped': 'already built'}
+2026-09-18: scored=0 v6 worklist={'worklist_date': '2026-09-18', 'skipped': 'already built'}
+2026-09-19: scored=0 v6 worklist={'worklist_date': '2026-09-19', 'skipped': 'already built'}
+2026-09-20: scored=0 v6 worklist={'worklist_date': '2026-09-20', 'skipped': 'already built'}
+2026-09-21: scored=0 v6 worklist={'worklist_date': '2026-09-21', 'skipped': 'already built'}
+2026-09-22: scored=0 v6 worklist={'worklist_date': '2026-09-22', 'skipped': 'already built'}
+2026-09-23: scored=0 v6 worklist={'worklist_date': '2026-09-23', 'skipped': 'already built'}
+2026-09-24: scored=0 v6 worklist={'worklist_date': '2026-09-24', 'skipped': 'already built'}
+2026-09-25: scored=0 v6 worklist={'worklist_date': '2026-09-25', 'skipped': 'already built'}
+2026-09-26: scored=0 v6 worklist={'worklist_date': '2026-09-26', 'skipped': 'already built'}
+2026-09-27: scored=0 v6 worklist={'worklist_date': '2026-09-27', 'skipped': 'already built'}
+2026-09-28: scored=0 v6 worklist={'worklist_date': '2026-09-28', 'skipped': 'already built'}
+2026-09-29: scored=0 v6 worklist={'worklist_date': '2026-09-29', 'skipped': 'already built'}
+2026-09-30: scored=0 v6 worklist={'worklist_date': '2026-09-30', 'skipped': 'already built'}
+== Month starting 2026-10-01: monthly retrain as of 2026-10-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v8 as_of=2026-10-01 (reused existing version)
+promoted=True champion=v9
+rows: {'train': 30874, 'validation': 7830, 'test': 8686}  windows: {'train': '2025-11-01..2026-05-10', 'validation': '2026-05-11..2026-07-01', 'test': '2026-07-02..2026-08-31'}
+test AUC=0.7475 Brier=0.11515 calibration slope=0.993 intercept=-0.026 observed=15.450% mean_predicted=15.642%
+champion v6 on same test: AUC=0.7470 Brier=0.11523
+gate: AUC 0.7475 vs champion 0.7470 (>= floor 0.7420)
+gate: Brier 0.11515 vs champion 0.11523 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   869 | 0.043 | 0.044
+     2 |   869 | 0.052 | 0.056
+     3 |   869 | 0.062 | 0.054
+     4 |   869 | 0.074 | 0.071
+     5 |   869 | 0.089 | 0.089
+     6 |   869 | 0.112 | 0.108
+     7 |   868 | 0.153 | 0.159
+     8 |   868 | 0.225 | 0.210
+     9 |   868 | 0.318 | 0.325
+    10 |   868 | 0.436 | 0.430
+then-current champion for 2026-10-01: v8
+2026-10-01: scored=0 v8 worklist={'worklist_date': '2026-10-01', 'skipped': 'already built'}
+2026-10-02: scored=0 v8 worklist={'worklist_date': '2026-10-02', 'skipped': 'already built'}
+2026-10-03: scored=0 v8 worklist={'worklist_date': '2026-10-03', 'skipped': 'already built'}
+2026-10-04: scored=0 v8 worklist={'worklist_date': '2026-10-04', 'skipped': 'already built'}
+2026-10-05: scored=0 v8 worklist={'worklist_date': '2026-10-05', 'skipped': 'already built'}
+2026-10-06: scored=0 v8 worklist={'worklist_date': '2026-10-06', 'skipped': 'already built'}
+2026-10-07: scored=0 v8 worklist={'worklist_date': '2026-10-07', 'skipped': 'already built'}
+2026-10-08: scored=0 v8 worklist={'worklist_date': '2026-10-08', 'skipped': 'already built'}
+2026-10-09: scored=0 v8 worklist={'worklist_date': '2026-10-09', 'skipped': 'already built'}
+2026-10-10: scored=0 v8 worklist={'worklist_date': '2026-10-10', 'skipped': 'already built'}
+2026-10-11: scored=0 v8 worklist={'worklist_date': '2026-10-11', 'skipped': 'already built'}
+2026-10-12: scored=0 v8 worklist={'worklist_date': '2026-10-12', 'skipped': 'already built'}
+2026-10-13: scored=0 v8 worklist={'worklist_date': '2026-10-13', 'skipped': 'already built'}
+2026-10-14: scored=0 v8 worklist={'worklist_date': '2026-10-14', 'skipped': 'already built'}
+2026-10-15: scored=0 v8 worklist={'worklist_date': '2026-10-15', 'skipped': 'already built'}
+2026-10-16: scored=0 v8 worklist={'worklist_date': '2026-10-16', 'skipped': 'already built'}
+2026-10-17: scored=0 v8 worklist={'worklist_date': '2026-10-17', 'skipped': 'already built'}
+2026-10-18: scored=0 v8 worklist={'worklist_date': '2026-10-18', 'skipped': 'already built'}
+2026-10-19: scored=0 v8 worklist={'worklist_date': '2026-10-19', 'skipped': 'already built'}
+2026-10-20: scored=0 v8 worklist={'worklist_date': '2026-10-20', 'skipped': 'already built'}
+2026-10-21: scored=0 v8 worklist={'worklist_date': '2026-10-21', 'skipped': 'already built'}
+2026-10-22: scored=0 v8 worklist={'worklist_date': '2026-10-22', 'skipped': 'already built'}
+2026-10-23: scored=0 v8 worklist={'worklist_date': '2026-10-23', 'skipped': 'already built'}
+2026-10-24: scored=0 v8 worklist={'worklist_date': '2026-10-24', 'skipped': 'already built'}
+2026-10-25: scored=0 v8 worklist={'worklist_date': '2026-10-25', 'skipped': 'already built'}
+2026-10-26: scored=0 v8 worklist={'worklist_date': '2026-10-26', 'skipped': 'already built'}
+2026-10-27: scored=0 v8 worklist={'worklist_date': '2026-10-27', 'skipped': 'already built'}
+2026-10-28: scored=0 v8 worklist={'worklist_date': '2026-10-28', 'skipped': 'already built'}
+2026-10-29: scored=0 v8 worklist={'worklist_date': '2026-10-29', 'skipped': 'already built'}
+2026-10-30: scored=0 v8 worklist={'worklist_date': '2026-10-30', 'skipped': 'already built'}
+2026-10-31: scored=0 v8 worklist={'worklist_date': '2026-10-31', 'skipped': 'already built'}
+== Month starting 2026-11-01: monthly retrain as of 2026-11-01
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v9 as_of=2026-11-01 (reused existing version)
+promoted=True champion=v9
+rows: {'train': 34468, 'validation': 8633, 'test': 9053}  windows: {'train': '2025-11-01..2026-06-02', 'validation': '2026-06-03..2026-08-01', 'test': '2026-08-02..2026-10-01'}
+test AUC=0.7554 Brier=0.11318 calibration slope=1.037 intercept=0.041 observed=15.398% mean_predicted=15.528%
+champion v8 on same test: AUC=0.7548 Brier=0.11328
+gate: AUC 0.7554 vs champion 0.7548 (>= floor 0.7498)
+gate: Brier 0.11318 vs champion 0.11328 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   906 | 0.042 | 0.042
+     2 |   906 | 0.052 | 0.051
+     3 |   906 | 0.063 | 0.056
+     4 |   905 | 0.074 | 0.071
+     5 |   905 | 0.087 | 0.096
+     6 |   905 | 0.111 | 0.086
+     7 |   905 | 0.151 | 0.149
+     8 |   905 | 0.220 | 0.218
+     9 |   905 | 0.316 | 0.316
+    10 |   905 | 0.438 | 0.455
+then-current champion for 2026-11-01: v9
+2026-11-01: scored=0 v9 worklist={'worklist_date': '2026-11-01', 'skipped': 'already built'}
+2026-11-02: scored=0 v9 worklist={'worklist_date': '2026-11-02', 'skipped': 'already built'}
+2026-11-03: scored=0 v9 worklist={'worklist_date': '2026-11-03', 'skipped': 'already built'}
+2026-11-04: scored=0 v9 worklist={'worklist_date': '2026-11-04', 'skipped': 'already built'}
+2026-11-05: scored=0 v9 worklist={'worklist_date': '2026-11-05', 'skipped': 'already built'}
+{'briefs_requested': 691, 'briefs_written': 0, 'brief_errors': 691, 'sample_errors': ['The model does not support the parameter(s): temperature. Please remove and retry.', 'The model does not support the parameter(s): temperature. Please remove and retry.', 'The model does not support the parameter(s): temperature. Please remove and retry.']}
+
+----
+
