@@ -12,13 +12,13 @@ Idempotent: a model version already trained for the same ``as_of`` is reused.
 from __future__ import annotations
 
 import argparse
-import json
 import tempfile
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import mlflow
+import mlflow.artifacts
 import mlflow.sklearn
 import pandas as pd
 from mlflow.exceptions import MlflowException
@@ -67,8 +67,14 @@ def _existing_version_for(client: MlflowClient, name: str, as_of: date) -> str |
         versions = client.search_model_versions(f"name = '{name}'")
     except MlflowException:
         return None
-    matches = [v for v in versions if (v.tags or {}).get("as_of_date") == as_of.isoformat()]
-    return max(matches, key=lambda v: int(v.version)).version if matches else None
+    # Unity Catalog search results omit tags; read each version's tags directly. Only
+    # versions whose training finished (training_complete, written last) are reused.
+    matches = []
+    for v in versions:
+        tags = client.get_model_version(name, v.version).tags or {}
+        if tags.get("as_of_date") == as_of.isoformat() and tags.get("training_complete") == "true":
+            matches.append(v.version)
+    return max(matches, key=int) if matches else None
 
 
 def training_frame(spark: SparkSession, catalog: str, as_of: date, train_start: date) -> pd.DataFrame:
@@ -128,9 +134,10 @@ def train_and_maybe_promote(
 
     existing = None if force else _existing_version_for(client, name, as_of)
     if existing:
-        tags = client.get_model_version(name, existing).tags
-        return TrainResult(name, existing, as_of.isoformat(), tags.get("promoted") == "true", True,
-                           champion_version(client, name), json.loads(tags.get("summary", "{}")))
+        mv = client.get_model_version(name, existing)
+        summary = mlflow.artifacts.load_dict(f"runs:/{mv.run_id}/training_summary.json")
+        return TrainResult(name, existing, as_of.isoformat(), mv.tags.get("promoted") == "true", True,
+                           champion_version(client, name), summary)
 
     data = training_frame(spark, catalog, as_of, train_start)
     if data.empty:
@@ -175,6 +182,7 @@ def train_and_maybe_promote(
             mlflow.log_metrics(champion.as_dict("champion_test_"))
         mlflow.log_metric("promoted", int(decision.promote))
         deciles = decile_table(y["test"], p_test)
+        summary["calibration_by_decile"] = deciles
         with tempfile.TemporaryDirectory() as tmp:
             for path in _log_calibration(deciles, Path(tmp)):
                 mlflow.log_artifact(str(path))
@@ -188,19 +196,20 @@ def train_and_maybe_promote(
         )
 
     version = str(info.registered_model_version)
-    summary["calibration_by_decile"] = deciles
+    # Tag values are limited to 1,000 characters; the full summary is the run artifact.
     for key, value in {
         "as_of_date": as_of.isoformat(),
         "promoted": str(decision.promote).lower(),
         "test_auc": f"{challenger.auc:.4f}",
         "test_brier": f"{challenger.brier:.5f}",
         "test_calibration_slope": f"{challenger.calibration_slope:.3f}",
-        "summary": json.dumps(summary),
     }.items():
         client.set_model_version_tag(name, version, key, value)
     client.set_registered_model_alias(name, CHALLENGER, version)
     if decision.promote:
         client.set_registered_model_alias(name, CHAMPION, version)
+    # Written last: marks the version as safe to reuse on rerun.
+    client.set_model_version_tag(name, version, "training_complete", "true")
     return TrainResult(name, version, as_of.isoformat(), decision.promote, False,
                        champion_version(client, name), summary)
 

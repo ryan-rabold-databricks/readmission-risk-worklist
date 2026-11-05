@@ -48,6 +48,9 @@ variables:
   avg_readmission_cost:
     description: Average cost of one readmission, used for estimated cost avoided.
     default: "15000"
+  warehouse_max_clusters:
+    description: Upper bound for warehouse scale-out (1 for single-developer dev; raise for concurrent demo or prod use).
+    default: 1
   service_principal_id:
     description: Application ID of the service principal that runs prod workloads.
     default: ""
@@ -78,5 +81,6 @@ targets:
     variables:
       env: prod
       catalog: prod_care_management
+      warehouse_max_clusters: 2
     run_as:
       service_principal_name: ${var.service_principal_id}

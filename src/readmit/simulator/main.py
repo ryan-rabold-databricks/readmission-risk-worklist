@@ -22,7 +22,7 @@ from readmit.simulator.generate import ENTITIES, LOOKAHEAD_DAYS, build_universe
 from readmit.simulator.summary import extract_counts, story_report
 
 # Bump when the extract schema or generation logic changes; see assert_single_generator_version.
-GENERATOR_VERSION = "2"
+GENERATOR_VERSION = "3"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

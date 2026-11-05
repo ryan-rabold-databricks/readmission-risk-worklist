@@ -164,7 +164,13 @@ def generate_briefs(spark: SparkSession, catalog: str, endpoint: str, since: dat
                 "modelParameters => named_struct('temperature', CAST(0.2 AS DOUBLE), 'max_tokens', 300))"
             ),
         )
-        .select("worklist_item_id", F.col("ai.response").alias("brief"), F.col("ai.errorMessage").alias("error"))
+    )
+    # With failOnError => false, ai_query returns STRUCT<result, errorMessage> on current
+    # runtimes (some references document `response`); read whichever is present.
+    fields = {f.name for f in answered.schema["ai"].dataType.fields}
+    text_field = "result" if "result" in fields else "response"
+    answered = answered.select(
+        "worklist_item_id", F.col(f"ai.{text_field}").alias("brief"), F.col("ai.errorMessage").alias("error")
     )
     # Materialize once: each row is one billed LLM call.
     results = answered.toPandas()

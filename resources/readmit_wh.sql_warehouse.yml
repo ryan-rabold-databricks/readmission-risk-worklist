@@ -1,0 +1,23 @@
+# SQL warehouse for the app's Program tab, the metric view, and the Genie Agent.
+# Jobs do not use it (ai_query runs on serverless job compute).
+
+resources:
+  sql_warehouses:
+    readmit_wh:
+      name: ${var.env}_readmit_wh
+      warehouse_type: PRO
+      enable_serverless_compute: true
+      enable_photon: true
+      cluster_size: X-Small
+      min_num_clusters: 1
+      max_num_clusters: ${var.warehouse_max_clusters}
+      auto_stop_mins: 5
+      spot_instance_policy: COST_OPTIMIZED
+      channel:
+        name: CHANNEL_NAME_CURRENT
+      tags:
+        custom_tags:
+          - key: project
+            value: readmission_worklist
+          - key: env
+            value: ${var.env}

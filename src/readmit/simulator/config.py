@@ -33,7 +33,7 @@ FACILITIES: tuple[FacilityProfile, ...] = (
     FacilityProfile("FAC-NGR", 0.24, 0.88, 0.74, 0.83, 0.00, "430", "740"),
     FacilityProfile("FAC-SVH", 0.20, 0.86, 0.72, 0.82, 0.05, "431", "380"),
     FacilityProfile("FAC-CCH", 0.12, 0.86, 0.72, 0.82, 0.00, "433", "220"),
-    FacilityProfile("FAC-RCH", 0.10, 0.72, 0.55, 0.75, 0.60, "457", "937"),
+    FacilityProfile("FAC-RCH", 0.10, 0.72, 0.55, 0.75, 0.75, "457", "937"),
 )
 
 # condition -> (base weight, frailty coef, winter mult, summer mult, age>=65 mult)
@@ -109,8 +109,8 @@ COMORBIDITY_LOGIT: dict[str, tuple[float, float, float]] = {
 class ReadmitModel:
     """Logistic ground truth for planned 30-day readmissions of index stays."""
 
-    intercept: float = -2.88
-    frailty: float = 0.45
+    intercept: float = -3.75
+    frailty: float = 2.0
     los_per_day: float = 0.06  # capped at 15 days
     emergent: float = 0.35
     medicaid: float = 0.15
@@ -151,6 +151,11 @@ class SimulatorConfig:
     inpatient_per_day: float = 140.0
     ed_per_day: float = 120.0
     bad_row_rate: float = 0.005
+    # Spread of hidden frailty within a utilization tier; lower means utilization and
+    # coded comorbidities reveal more of it (more model-observable signal).
+    frailty_within_tier_sd: float = 0.25
+    # Multiplier on each comorbidity's frailty coefficient (COMORBIDITY_LOGIT).
+    comorbidity_frailty_scale: float = 2.4
     readmit: ReadmitModel = field(default_factory=ReadmitModel)
 
     def __post_init__(self) -> None:

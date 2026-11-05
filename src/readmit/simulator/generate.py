@@ -114,7 +114,7 @@ def _patients(spark: SparkSession, cfg: SimulatorConfig, rng: HashRng) -> DataFr
     idx = F.col("patient_idx")
     tier = F.when(idx < int(n * 0.05), 0).when(idx < int(n * 0.20), 1).otherwise(2)
     tier_shift = F.when(tier == 0, 1.6).when(tier == 1, 0.7).otherwise(-0.35)
-    frailty = tier_shift + F.lit(0.8) * rng.normal("frailty", idx)
+    frailty = tier_shift + F.lit(cfg.frailty_within_tier_sd) * rng.normal("frailty", idx)
     age = F.least(
         F.lit(98),
         F.greatest(F.lit(18), F.round(F.lit(58.0) + 13 * rng.normal("age", idx) + 5 * F.col("frailty"))),
@@ -134,7 +134,7 @@ def _patients(spark: SparkSession, cfg: SimulatorConfig, rng: HashRng) -> DataFr
     comorbid = []
     for category, (a, b, c) in COMORBIDITY_LOGIT.items():
         code = CHARLSON_CATEGORIES[category][0]
-        logit = F.lit(a) + F.lit(b) * F.col("frailty") + F.lit(c) * (F.col("age") - 65) / 10
+        logit = F.lit(a) + F.lit(b * cfg.comorbidity_frailty_scale) * F.col("frailty") + F.lit(c) * (F.col("age") - 65) / 10
         comorbid.append(F.when(rng.u(f"cm:{category}", idx) < sigmoid(logit), F.lit(code)))
 
     return (
