@@ -73,3 +73,12 @@ def test_publish_state_check_handles_both_pipeline_enums():
     assert _state(UpdateInfoState.COMPLETED) in FINAL
     assert _state(UpdateStateInfoState.COMPLETED) in FINAL
     assert _state(UpdateStateInfoState.RUNNING) not in FINAL
+
+
+def test_active_views_carry_only_care_manager_columns():
+    from readmit.worklist.tables import CARE_WORKLIST_ACTIVE_COLUMNS, _view_ddl
+
+    assert not {"encounter_id", "patient_id", "score_id"} & set(CARE_WORKLIST_ACTIVE_COLUMNS)
+    assert not any(c.startswith("audit_") for c in CARE_WORKLIST_ACTIVE_COLUMNS)
+    ddl = _view_ddl("cat", 30)["care_worklist_active"]
+    assert "INTERVAL 30 DAYS" in ddl and "max(worklist_date)" in ddl

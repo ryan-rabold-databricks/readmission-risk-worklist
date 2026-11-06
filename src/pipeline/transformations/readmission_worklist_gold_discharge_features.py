@@ -22,6 +22,7 @@ LOOKBACK_ED_DAYS = 182
 LOOKBACK_INPATIENT_DAYS = 365
 FOLLOWUP_WINDOW_DAYS = 7
 FOLLOWUP_BOOKED_WITHIN_HOURS = 24  # booked by the morning-after scoring run
+WORKLIST_RELEASE_HOUR_UTC = 12  # readmit.common.dates.release_ts
 READMIT_WINDOW_DAYS = 30
 
 
@@ -120,6 +121,10 @@ def discharge_features():
             F.max(
                 in_window
                 & (F.col("booked_ts") <= F.col("discharge_ts") + F.expr(f"INTERVAL {FOLLOWUP_BOOKED_WITHIN_HOURS} HOURS"))
+                # Known at scoring time only: bookings made after the worklist release
+                # (care-manager outreach) are outcomes of the program, not inputs.
+                & (F.col("booked_ts") < F.to_timestamp(F.concat(
+                    F.date_add(F.to_date("discharge_ts"), 1).cast("string"), F.lit(f" {WORKLIST_RELEASE_HOUR_UTC:02d}:00:00"))))
             ).alias("followup_scheduled_7d"),
             F.max(in_window & (F.col("status") == "COMPLETED")).alias("followup_within_7d"),
         )

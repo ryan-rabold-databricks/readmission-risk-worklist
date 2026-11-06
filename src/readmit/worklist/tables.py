@@ -1,7 +1,9 @@
 """Gold tables written by jobs (not the pipeline). Created idempotently on every run.
 
-care_worklist and care_team_roster enable change data feed because Phase 4 syncs them
-to Lakebase. Only primary keys are declared (DECISIONS.md #25).
+care_worklist and care_team_roster enable change data feed (kept for downstream
+incremental readers). Lakebase syncs the *_active views instead: the minimum necessary
+for a care manager (DECISIONS.md #46), so Postgres never holds the full history of
+names and phone numbers. Only primary keys are declared (DECISIONS.md #25).
 """
 
 from __future__ import annotations
@@ -76,6 +78,43 @@ TBLPROPERTIES (delta.enableChangeDataFeed = true)""",
     }
 
 
-def ensure_tables(spark: SparkSession, catalog: str) -> None:
+# Worklist days kept in Lakebase: the 30-day readmission window a care manager may
+# still be following up in.
+ACTIVE_WINDOW_DAYS = 30
+
+# Columns a care manager needs to make and log the call; internal keys (encounter,
+# patient, score) and audit columns stay in the lakehouse.
+CARE_WORKLIST_ACTIVE_COLUMNS = (
+    "worklist_item_id", "facility_id", "worklist_date", "assignment_status", "assigned_care_manager",
+    "patient_display_name", "phone", "risk_score", "risk_tier", "top_drivers", "outreach_brief",
+    "due_at", "created_at",
+)
+CARE_TEAM_ROSTER_ACTIVE_COLUMNS = ("roster_id", "care_manager_email", "facility_id", "roster_date", "daily_capacity")
+
+
+def _view_ddl(catalog: str, window_days: int) -> dict[str, str]:
+    """The window is relative to the latest built day (not the wall clock), so the views
+    are reproducible and still work during a backfill."""
+    def view(name: str, source: str, cols: tuple[str, ...], date_col: str, comment: str) -> str:
+        return f"""
+CREATE OR REPLACE VIEW {table(catalog, name)}
+COMMENT '{comment}'
+AS SELECT {", ".join(cols)}
+FROM {table(catalog, source)}
+WHERE {date_col} > (SELECT max({date_col}) FROM {table(catalog, source)}) - INTERVAL {int(window_days)} DAYS"""
+
+    return {
+        "care_worklist_active": view(
+            "care_worklist_active", "care_worklist", CARE_WORKLIST_ACTIVE_COLUMNS, "worklist_date",
+            f"Lakebase sync source: care-manager columns for the latest {window_days} worklist days"),
+        "care_team_roster_active": view(
+            "care_team_roster_active", "care_team_roster", CARE_TEAM_ROSTER_ACTIVE_COLUMNS, "roster_date",
+            f"Lakebase sync source: roster for the latest {window_days} worklist days"),
+    }
+
+
+def ensure_tables(spark: SparkSession, catalog: str, window_days: int = ACTIVE_WINDOW_DAYS) -> None:
     for ddl in _ddl(catalog).values():
+        spark.sql(ddl)
+    for ddl in _view_ddl(catalog, window_days).values():
         spark.sql(ddl)

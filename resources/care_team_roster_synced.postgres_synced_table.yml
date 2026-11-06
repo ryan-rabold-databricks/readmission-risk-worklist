@@ -5,10 +5,10 @@ resources:
   postgres_synced_tables:
     care_team_roster_synced:
       synced_table_id: ${var.catalog}.readmission_worklist_gold.care_team_roster_synced
-      source_table_full_name: ${var.catalog}.readmission_worklist_gold.care_team_roster
+      source_table_full_name: ${var.catalog}.readmission_worklist_gold.care_team_roster_active
       primary_key_columns:
         - roster_id
-      scheduling_policy: TRIGGERED
+      scheduling_policy: SNAPSHOT
       branch: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}
       postgres_database: ${resources.postgres_databases.readmission_worklist_db.postgres_database}
       create_database_objects_if_missing: true

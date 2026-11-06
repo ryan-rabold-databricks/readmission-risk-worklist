@@ -4,6 +4,11 @@ Lands every missing daily EHR extract from history_start through run_date (defau
 yesterday, UTC) into the ehr_landing volume. The first run backfills the full
 history; later runs land only the new days. Already-landed dates are never rewritten,
 so the job is safe to rerun.
+
+Program response (generator v4): the simulated world reacts to outreach the app has
+captured. Reached patients are read from the Lakebase CDF landing table
+readmission_worklist_app_bronze.lb_outreach_activity_history (current state), so a
+reach can only change events that land after it (DECISIONS.md #45).
 """
 
 from __future__ import annotations
@@ -22,7 +27,8 @@ from readmit.simulator.generate import ENTITIES, LOOKAHEAD_DAYS, build_universe
 from readmit.simulator.summary import extract_counts, story_report
 
 # Bump when the extract schema or generation logic changes; see assert_single_generator_version.
-GENERATOR_VERSION = "3"
+GENERATOR_VERSION = "4"
+OUTREACH_HISTORY = "readmission_worklist_app_bronze.lb_outreach_activity_history"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -33,6 +39,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--run-date", default="", help="YYYY-MM-DD; empty means yesterday (UTC)")
     p.add_argument("--avg-readmission-cost", type=float, default=15000.0)
     p.add_argument("--dry-run", action="store_true", help="Build and report; land nothing")
+    p.add_argument("--no-program-response", action="store_true",
+                   help="Ignore captured outreach (output matches generator v3)")
     return p.parse_args(argv)
 
 
@@ -46,6 +54,33 @@ def resolve_run_date(raw: str, today: date) -> date:
 def missing_dates(history_start: date, run_date: date, landed: set[date]) -> list[date]:
     span = (run_date - history_start).days + 1
     return [d for d in (history_start + timedelta(days=i) for i in range(span)) if d not in landed]
+
+
+def load_reach(spark, catalog: str):
+    """First REACHED call per worklist item, from the current state of the CDF history
+    (latest change per activity_id; deleted activities drop out). None if no history."""
+    table = f"{catalog}.{OUTREACH_HISTORY}"
+    if not spark.catalog.tableExists(table):
+        return None
+    return spark.sql(f"""
+        SELECT worklist_item_id, min(activity_ts) AS reach_ts
+        FROM (
+          SELECT *, row_number() OVER (PARTITION BY activity_id ORDER BY _pg_lsn DESC, _sort_by DESC) AS rn
+          FROM {table}
+          WHERE _pg_change_type IN ('insert', 'update_postimage', 'delete')
+        )
+        WHERE rn = 1 AND _pg_change_type != 'delete' AND activity_type = 'REACHED'
+        GROUP BY worklist_item_id""").localCheckpoint()
+
+
+def program_summary(universe, run_date: date) -> str:
+    row = (universe.inpatient.filter(F.col("is_index") & (F.to_date("discharge_ts") <= F.lit(run_date)))
+           .agg(F.sum(F.col("reach_ts").isNotNull().cast("int")).alias("reached"),
+                F.sum(F.col("cm_followup_booked").cast("int")).alias("cm_bookings"),
+                F.sum(F.col("readmit_prevented").cast("int")).alias("prevented"))
+           .first())
+    return (f"Program response: reached index stays={row.reached or 0}, care-manager follow-ups booked="
+            f"{row.cm_bookings or 0}, readmissions prevented={row.prevented or 0}")
 
 
 def late_records(spark, universe_df, entity: str, volume_root: str, dates: list[date]):
@@ -75,11 +110,14 @@ def main(argv: list[str] | None = None) -> None:
     print(f"env={args.env} catalog={args.catalog} history_start={cfg.history_start} run_date={cfg.run_date}")
 
     spark = get_spark()
-    universe = build_universe(spark, cfg)
+    reach = None if args.no_program_response else load_reach(spark, args.catalog)
+    print(f"Program response input: {reach.count() if reach is not None else 0} reached worklist items")
+    universe = build_universe(spark, cfg, reach)
 
     if args.dry_run:
         print("Dry run: nothing landed.")
         print(story_report(universe.inpatient, cfg.run_date, args.avg_readmission_cost))
+        print(program_summary(universe, cfg.run_date))
         return
 
     from databricks.sdk import WorkspaceClient
@@ -137,6 +175,7 @@ def main(argv: list[str] | None = None) -> None:
     for entity in ENTITIES:
         print(f"  {entity}: {sum(counts[entity].values()):,} records")
     print(story_report(universe.inpatient, cfg.run_date, args.avg_readmission_cost))
+    print(program_summary(universe, cfg.run_date))
 
 
 if __name__ == "__main__":

@@ -15,6 +15,11 @@ Story (deterministic, hash-based like the EHR simulator, DECISIONS.md #20):
 - Only activities before the cutoff (release of run_date) are written; reruns with a
   later run_date add the later activities. Inserts are ON CONFLICT DO NOTHING on
   client_request_id, so reruns never duplicate.
+- Reconcile: simulator-owned rows (client_request_id prefix SIM_VERSION) that are no
+  longer in the plan, because the worklist was rebuilt, are deleted. Rows written by
+  the app are never touched.
+- The EHR simulator (generator v4) reads the REACHED calls back through Lakebase CDF and
+  makes reached patients readmit less (DECISIONS.md #45).
 - note is always NULL (free text is PHI-prone; IDs only).
 """
 
@@ -125,15 +130,23 @@ VALUES (%(activity_id)s, %(worklist_item_id)s, %(client_request_id)s, %(care_man
 ON CONFLICT (client_request_id) DO NOTHING"""
 
 
-def write_activities(conn, activities: list[dict]) -> int:
+def write_activities(conn, activities: list[dict]) -> dict[str, int]:
+    """Delete stale simulator rows, then insert missing ones. Returns counts."""
+    planned = [a["client_request_id"] for a in activities]
     with conn.cursor() as cur:
+        cur.execute(
+            f"DELETE FROM {APP_SCHEMA}.outreach_activity "
+            f"WHERE client_request_id LIKE %s AND NOT (client_request_id = ANY(%s))",
+            (f"{SIM_VERSION}:%", planned))
+        deleted = cur.rowcount
+        conn.commit()
         cur.execute(f"SELECT count(*) FROM {APP_SCHEMA}.outreach_activity")
         before = cur.fetchone()[0]
         for i in range(0, len(activities), INSERT_BATCH):
             cur.executemany(INSERT_SQL, activities[i:i + INSERT_BATCH])
             conn.commit()
         cur.execute(f"SELECT count(*) FROM {APP_SCHEMA}.outreach_activity")
-        return cur.fetchone()[0] - before
+        return {"deleted_stale": deleted, "inserted": cur.fetchone()[0] - before}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -164,11 +177,11 @@ def main(argv: list[str] | None = None) -> None:
     activities = plan_activities(items, cutoff)
     w = WorkspaceClient()
     with connect(w, LakebaseTarget(args.lakebase_project, args.lakebase_branch, args.lakebase_database)) as conn:
-        inserted = write_activities(conn, activities)
+        written = write_activities(conn, activities)
     reached = {a["worklist_item_id"] for a in activities if a["activity_type"] == "REACHED"}
     print(json.dumps({
         "run_date": run_date.isoformat(), "cutoff": cutoff.isoformat(), "assigned_items": len(items),
-        "planned_activities": len(activities), "inserted": inserted,
+        "planned_activities": len(activities), **written,
         "by_type": dict(Counter(a["activity_type"] for a in activities)),
         "reach_rate": round(len(reached) / len(items), 3) if items else None,
     }, indent=2))

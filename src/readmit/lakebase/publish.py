@@ -1,9 +1,10 @@
 """publish_worklist task: push the day's gold worklist and roster to Lakebase.
 
-Synced tables are TRIGGERED, so each sync runs once per daily cycle, after
-build_worklist has written the whole day. Each sync is an incremental update of its
-managed pipeline (change data feed on the source). The task then checks that
-Postgres holds exactly the rows UC holds for the published day.
+Synced tables are SNAPSHOT copies of the *_active views (minimum necessary, latest
+30 worklist days; DECISIONS.md #46), refreshed once per daily cycle after
+build_worklist has written the whole day. Each sync is an update of the synced
+table's managed pipeline. The task then checks that Postgres holds exactly the rows
+the view holds, in total and for the published day.
 """
 
 from __future__ import annotations
@@ -22,8 +23,8 @@ from readmit.lakebase.connect import LakebaseTarget, connect
 
 # Synced table -> (source table, date column used for the row-count check).
 SYNCED_TABLES = {
-    "care_worklist_synced": ("care_worklist", "worklist_date"),
-    "care_team_roster_synced": ("care_team_roster", "roster_date"),
+    "care_worklist_synced": ("care_worklist_active", "worklist_date"),
+    "care_team_roster_synced": ("care_team_roster_active", "roster_date"),
 }
 # Compared by value: latest_updates[].state and get_update().state are different enum types.
 FINAL = {"COMPLETED", "FAILED", "CANCELED"}
@@ -82,14 +83,17 @@ def main(argv: list[str] | None = None) -> None:
     summary = {"run_date": run_date.isoformat(), "tables": {}}
     for synced, (source, date_col) in SYNCED_TABLES.items():
         result = run_sync(w, pipeline_id(w, args.catalog, synced))
-        uc_rows = spark.table(f"{args.catalog}.{SYNCED_SCHEMA}.{source}").filter(f"{date_col} = DATE'{run_date}'").count()
+        src = spark.table(f"{args.catalog}.{SYNCED_SCHEMA}.{source}")
+        uc = {"total": src.count(), "day": src.filter(f"{date_col} = DATE'{run_date}'").count()}
         with connect(w, target) as conn, conn.cursor() as cur:
-            cur.execute(f"SELECT count(*) FROM {SYNCED_SCHEMA}.{synced} WHERE {date_col} = %s", (run_date,))
-            pg_rows = cur.fetchone()[0]
-        result.update(uc_rows=uc_rows, pg_rows=pg_rows)
+            cur.execute(f"SELECT count(*), count(*) FILTER (WHERE {date_col} = %s) FROM {SYNCED_SCHEMA}.{synced}",
+                        (run_date,))
+            pg_total, pg_day = cur.fetchone()
+        result.update(uc_rows=uc, pg_rows={"total": pg_total, "day": pg_day})
         summary["tables"][synced] = result
-        if uc_rows != pg_rows:
-            raise RuntimeError(f"{synced}: Postgres has {pg_rows} rows for {run_date}, UC has {uc_rows}: {summary}")
+        if (uc["total"], uc["day"]) != (pg_total, pg_day):
+            raise RuntimeError(f"{synced}: Postgres {pg_total}/{pg_day} rows (total/{run_date}) "
+                               f"!= UC {uc['total']}/{uc['day']}: {summary}")
     print(json.dumps(summary, indent=2))
 
 

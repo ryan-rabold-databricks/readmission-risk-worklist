@@ -70,7 +70,9 @@ class Universe:
     inpatient: DataFrame  # clean inpatient stays with ground-truth columns, for summaries
 
 
-def build_universe(spark: SparkSession, cfg: SimulatorConfig) -> Universe:
+def build_universe(spark: SparkSession, cfg: SimulatorConfig, reach: DataFrame | None = None) -> Universe:
+    """reach: (worklist_item_id, reach_ts) of patients the care team reached; None means
+    no program response (the output then matches generator v3)."""
     rng = HashRng(cfg.seed)
     # localCheckpoint (eager) materializes shared intermediates once. Without it every
     # downstream action re-sends and re-plans the full lineage over Spark Connect,
@@ -85,7 +87,8 @@ def build_universe(spark: SparkSession, cfg: SimulatorConfig) -> Universe:
     )
 
     index = _with_followup_plan(_index_inpatient(days, patients, cfg, rng), rng, "idx")
-    index = _with_readmission(index, cfg, rng).localCheckpoint()
+    index = _with_readmission(index, cfg, rng)
+    index = _with_program_response(index, reach, cfg, rng).localCheckpoint()
     readmits = _with_followup_plan(_readmit_inpatient(index, rng), rng, "rdm")
     inpatient = index.unionByName(readmits, allowMissingColumns=True).localCheckpoint()
     ed = _ed_visits(days, patients, cfg, rng).localCheckpoint()
@@ -94,7 +97,7 @@ def build_universe(spark: SparkSession, cfg: SimulatorConfig) -> Universe:
         "patient": _patient_records(patients, inpatient, ed, rng, cfg.history_start),
         "encounter": _encounter_records(inpatient, ed),
         "diagnosis": _diagnosis_records(inpatient, ed, rng),
-        "appointment": _appointment_records(inpatient),
+        "appointment": _appointment_records(inpatient).unionByName(_cm_appointment_records(index)),
     }
     in_window = F.col("extract_date").between(
         F.lit(cfg.history_start), F.lit(cfg.run_date)
@@ -374,6 +377,59 @@ def _with_readmission(df: DataFrame, cfg: SimulatorConfig, rng: HashRng) -> Data
     )
 
 
+def _with_program_response(df: DataFrame, reach: DataFrame | None, cfg: SimulatorConfig, rng: HashRng) -> DataFrame:
+    """Outreach changes what happens after the reach (DECISIONS.md #45).
+
+    A reached patient without a 7-day follow-up planned at discharge gets one booked
+    by the care manager (booked a few minutes after the call). The readmission logit
+    drops by the call effect, plus the existing 7-day follow-up effect when that visit
+    is attended within 7 days of discharge and before any readmission. The base draw
+    ``rd:yes`` is reused, so a readmission can be prevented but never created, and a
+    readmission admitted before the reach is never changed.
+    """
+    p, m = cfg.program, cfg.readmit
+    k = F.col("encounter_number")
+    if reach is None:
+        df = df.withColumn("reach_ts", F.lit(None).cast("timestamp"))
+    else:
+        # worklist_item_id = SHA-256(encounter_id) and encounter_id = SHA-256(encounter_number).
+        wid = F.sha2(F.sha2(k, 256), 256)
+        df = (df.withColumn("_wid", wid)
+              .join(F.broadcast(reach.select(F.col("worklist_item_id").alias("_wid"), "reach_ts")), "_wid", "left")
+              .drop("_wid"))
+    fac = F.col("facility_id")
+    complete_rate = F.element_at(literal_map({f.facility_id: f.followup_completion_rate for f in FACILITIES}), fac)
+    followup_effect = F.when(F.col("condition_group") == "heart_failure", m.followup_7d_heart_failure).otherwise(m.followup_7d)
+    reached = F.col("reach_ts").isNotNull()
+    readmit_ts = F.col("readmit_admit_ts")
+    after_reach = F.coalesce(readmit_ts > F.col("reach_ts"), F.lit(False))
+    visit_day = F.greatest(F.date_add(F.to_date("reach_ts"), 1), F.date_add(F.to_date("discharge_ts"), 2))
+    df = (
+        df.withColumn("cm_followup_booked", reached & ~F.col("followup_7d_planned") & (rng.u("pr:book", k) < p.book_followup_rate))
+        .withColumn("cm_booked_ts", F.when(F.col("cm_followup_booked"),
+                                           F.col("reach_ts") + F.expr(f"INTERVAL {p.booking_delay_minutes} MINUTES")))
+        .withColumn("cm_scheduled_ts", F.when(F.col("cm_followup_booked"), ts_at(
+            F.date_add(visit_day, F.floor(rng.u("pr:off", k) * 3).cast("int")),
+            (8 + F.floor(rng.u("pr:sh", k) * 9)) * _HOUR)))
+        .withColumn("cm_attends", rng.u("pr:comp", k) < complete_rate * (1 - 0.06 * F.greatest(F.col("frailty"), F.lit(0.0))))
+    )
+    visit_helps = (
+        F.col("cm_followup_booked") & F.col("cm_attends")
+        & (F.col("cm_scheduled_ts") <= F.col("discharge_ts") + F.expr("INTERVAL 7 DAYS"))
+        & ~F.coalesce(readmit_ts < F.col("cm_scheduled_ts"), F.lit(False))
+    )
+    prob = F.col("readmit_prob")
+    base_logit = F.log(prob / (1 - prob))
+    new_prob = sigmoid(base_logit + p.reached_logit + F.when(visit_helps, followup_effect).otherwise(0.0))
+    prevented = reached & F.col("planned_readmit") & after_reach & (prob > 0) & (rng.u("rd:yes", k) >= new_prob)
+    return (
+        df.withColumn("readmit_prevented", F.coalesce(prevented, F.lit(False)))
+        .withColumn("planned_readmit", F.col("planned_readmit") & ~F.col("readmit_prevented"))
+        .withColumn("readmit_day", F.when(F.col("planned_readmit"), F.col("readmit_day")))
+        .withColumn("readmit_admit_ts", F.when(F.col("planned_readmit"), F.col("readmit_admit_ts")))
+    )
+
+
 def _readmit_inpatient(index: DataFrame, rng: HashRng) -> DataFrame:
     k = F.col("index_encounter_number")
     emergent_rate = literal_map(EMERGENT_RATE)
@@ -583,6 +639,25 @@ def _appointment_records(inpatient: DataFrame) -> DataFrame:
         F.when(cancelled_by_readmit, F.unix_timestamp("readmit_admit_ts") + 900)
         .otherwise(F.unix_timestamp("scheduled_ts") + _HOUR)
         .alias("_ts"),
+    )
+    return _finalize(scheduled.unionByName(final), "appointment")
+
+
+def _cm_appointment_records(index: DataFrame) -> DataFrame:
+    """Follow-ups booked by care managers after outreach (generator v4). A separate
+    appointment (APC prefix), so booked_ts is the call time, never the discharge."""
+    appts = index.filter("cm_followup_booked").withColumn(
+        "appointment_number", F.concat(F.lit("APC"), F.substring("encounter_number", 3, 20))
+    )
+    cols = ["appointment_number", "mrn", F.col("encounter_number").alias("source_encounter_number"),
+            F.col("cm_scheduled_ts").alias("scheduled_ts"), "provider_type"]
+    scheduled = appts.select(*cols, F.lit("SCHEDULED").alias("status"), F.unix_timestamp("cm_booked_ts").alias("_ts"))
+    cancelled = F.coalesce(F.col("readmit_admit_ts") < F.col("cm_scheduled_ts"), F.lit(False))
+    final = appts.select(
+        *cols,
+        F.when(cancelled, "CANCELLED").when(F.col("cm_attends"), "COMPLETED").otherwise("NO_SHOW").alias("status"),
+        F.when(cancelled, F.unix_timestamp("readmit_admit_ts") + 900)
+        .otherwise(F.unix_timestamp("cm_scheduled_ts") + _HOUR).alias("_ts"),
     )
     return _finalize(scheduled.unionByName(final), "appointment")
 

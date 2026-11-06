@@ -12,6 +12,7 @@ Idempotent: a model version already trained for the same ``as_of`` is reused.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import tempfile
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -62,7 +63,16 @@ def champion_version(client: MlflowClient, name: str) -> str | None:
         return None
 
 
-def _existing_version_for(client: MlflowClient, name: str, as_of: date) -> str | None:
+def data_fingerprint(df: pd.DataFrame) -> str:
+    """SHA-256 of every training row (features and label), in a stable order. A version
+    is reused only when it was trained on exactly this data, so a re-landed source (for
+    example a new simulator generator) retrains instead of silently reusing."""
+    cols = ["encounter_id", "discharge_date", *FEATURE_COLUMNS, LABEL]
+    payload = df[cols].sort_values(["discharge_date", "encounter_id"]).to_csv(index=False)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _existing_version_for(client: MlflowClient, name: str, as_of: date, fingerprint: str) -> str | None:
     try:
         versions = client.search_model_versions(f"name = '{name}'")
     except MlflowException:
@@ -72,7 +82,8 @@ def _existing_version_for(client: MlflowClient, name: str, as_of: date) -> str |
     matches = []
     for v in versions:
         tags = client.get_model_version(name, v.version).tags or {}
-        if tags.get("as_of_date") == as_of.isoformat() and tags.get("training_complete") == "true":
+        if (tags.get("as_of_date") == as_of.isoformat() and tags.get("training_complete") == "true"
+                and tags.get("training_data_sha256") == fingerprint):
             matches.append(v.version)
     return max(matches, key=int) if matches else None
 
@@ -132,16 +143,16 @@ def train_and_maybe_promote(
     client = MlflowClient(registry_uri="databricks-uc")
     name = model_name(catalog)
 
-    existing = None if force else _existing_version_for(client, name, as_of)
+    data = training_frame(spark, catalog, as_of, train_start)
+    if data.empty:
+        raise RuntimeError(f"No matured training labels between {train_start} and {as_of}")
+    fingerprint = data_fingerprint(data)
+    existing = None if force else _existing_version_for(client, name, as_of, fingerprint)
     if existing:
         mv = client.get_model_version(name, existing)
         summary = mlflow.artifacts.load_dict(f"runs:/{mv.run_id}/training_summary.json")
         return TrainResult(name, existing, as_of.isoformat(), mv.tags.get("promoted") == "true", True,
                            champion_version(client, name), summary)
-
-    data = training_frame(spark, catalog, as_of, train_start)
-    if data.empty:
-        raise RuntimeError(f"No matured training labels between {train_start} and {as_of}")
     train, val, test = time_split(data)
     X = {k: model_lib.model_frame(v) for k, v in (("train", train), ("val", val), ("test", test))}
     y = {k: v[LABEL].astype(int).values for k, v in (("train", train), ("val", val), ("test", test))}
@@ -164,6 +175,7 @@ def train_and_maybe_promote(
     }
     summary = {
         "as_of": as_of.isoformat(),
+        "training_data_sha256": fingerprint,
         "rows": {"train": len(train), "validation": len(val), "test": len(test)},
         "windows": windows,
         "best_iteration": int(pipeline.named_steps["clf"].best_iteration),
@@ -199,6 +211,7 @@ def train_and_maybe_promote(
     # Tag values are limited to 1,000 characters; the full summary is the run artifact.
     for key, value in {
         "as_of_date": as_of.isoformat(),
+        "training_data_sha256": fingerprint,
         "promoted": str(decision.promote).lower(),
         "test_auc": f"{challenger.auc:.4f}",
         "test_brier": f"{challenger.brier:.5f}",

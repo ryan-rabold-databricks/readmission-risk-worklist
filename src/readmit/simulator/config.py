@@ -7,6 +7,8 @@ The story the data tells (approved 2026-11-02):
 - Heart failure patients discharged without a 7-day follow-up readmit far more
   often than those who get one.
 - A winter respiratory surge (Dec-Feb) raises COPD and pneumonia volume and risk.
+- Program response (generator v4, DECISIONS.md #45): once outreach exists, patients the
+  care team reaches readmit less, partly through follow-ups the care manager books.
 """
 
 from __future__ import annotations
@@ -143,6 +145,22 @@ class ReadmitModel:
 
 
 @dataclass(frozen=True)
+class ProgramResponse:
+    """How the simulated world responds to outreach captured by the app.
+
+    Applied only to index stays whose patient was REACHED (from the Lakebase CDF
+    landing table), and only to events after the reach. Draws are shared with the
+    base readmission model, so the program can prevent readmissions, never add them.
+    """
+
+    # P(care manager books a follow-up | reached, no 7-day follow-up planned at discharge)
+    book_followup_rate: float = 0.65
+    booking_delay_minutes: int = 5
+    # Transitional-care call effect (medication review, education) on the readmission logit.
+    reached_logit: float = -0.30
+
+
+@dataclass(frozen=True)
 class SimulatorConfig:
     history_start: date
     run_date: date
@@ -157,6 +175,7 @@ class SimulatorConfig:
     # Multiplier on each comorbidity's frailty coefficient (COMORBIDITY_LOGIT).
     comorbidity_frailty_scale: float = 2.4
     readmit: ReadmitModel = field(default_factory=ReadmitModel)
+    program: ProgramResponse = field(default_factory=ProgramResponse)
 
     def __post_init__(self) -> None:
         if self.run_date < self.history_start:
