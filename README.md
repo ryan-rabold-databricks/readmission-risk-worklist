@@ -74,6 +74,7 @@ Design decisions are logged in [`docs/DECISIONS.md`](docs/DECISIONS.md). The ful
 | Silver | `<data_domain>_silver` | `clinical_silver`, `care_management_silver` |
 | Gold | `<data_product>_gold` | `readmission_worklist_gold` (tables, metric view, and the model) |
 | Shared governance | `phi_governance` | Mask and row filter functions used by every product |
+| Internal (not a data product) | `<data_product>_sync_internal` | `readmission_worklist_sync_internal` (Lakebase synced-table pipeline storage; no analyst grants, not in Genie) |
 | Lakebase | project and database named after the app | project `readmission-worklist`, database `readmission_worklist` |
 | Lakebase schemas | mirror UC at the schema level | `readmission_worklist_gold` (synced tables, `_synced` suffix); `readmission_worklist_app` (app-owned writes) |
 
@@ -166,7 +167,7 @@ readmission-risk-worklist/
 ├── databricks.yml              # Bundle definition, variables, dev/prod targets, wheel artifact
 ├── pyproject.toml              # readmit wheel (job code) and its entry points
 ├── resources/                  # Bundle resources, one per file: <name>.<type>.yml
-│   ├── *.schema.yml            # The seven UC schemas
+│   ├── *.schema.yml            # The eight UC schemas (incl. readmission_worklist_sync_internal)
 │   ├── ehr_landing.volume.yml  # ehr_raw.ehr_landing
 │   ├── readmit_pipeline.pipeline.yml
 │   ├── readmit_source_simulator.job.yml
@@ -237,12 +238,12 @@ Promotion gates (job parameters): first model AUC >= 0.68 and calibration slope 
 |---|---|
 | Project `readmission-worklist` | Postgres 17, autoscaling 0.5 to `lakebase_max_cu` CU, scale-to-zero after 5 minutes; bundle resource with `prevent_destroy` |
 | Database `readmission_worklist` | Holds both schemas so the app can join the synced worklist with its own writes |
-| `readmission_worklist_gold.care_worklist_synced`, `care_team_roster_synced` | Synced tables (TRIGGERED, read-only in Postgres). The daily cycle's `publish_worklist` task starts each sync after `build_worklist` and fails unless Postgres matches UC for the day |
+| `readmission_worklist_gold.care_worklist_synced`, `care_team_roster_synced` | Synced tables (SNAPSHOT, read-only in Postgres) of the minimum-necessary views `care_worklist_active` / `care_team_roster_active`: care-manager columns, latest 30 worklist days. The daily cycle's `publish_worklist` task refreshes them after `build_worklist` and fails unless Postgres matches UC. Pipeline internals live in `readmission_worklist_sync_internal` |
 | `readmission_worklist_app.outreach_activity`, `program_setting_change` | App-owned, append-only (the app role gets SELECT, INSERT only), CHECK-constrained controlled values, `REPLICA IDENTITY FULL` |
 | Lakebase CDF feed `readmission_worklist_app` | Streams the app schema into `readmission_worklist_app_bronze.lb_<table>_history` (about 15 s batches). Never configured on the synced gold schema |
-| `<env>_readmit_outreach_simulator` (demo only) | Deterministic outreach history for past worklist days (about 60% reach rate), written through Lakebase like the app. Does not change outcomes |
+| `<env>_readmit_outreach_simulator` (demo only) | Deterministic outreach history for past worklist days (about 60% reach rate), written through Lakebase like the app; reconciles its own rows after a rebuild. The EHR simulator (generator v4) reads the REACHED calls back through CDF, so reached patients get care-manager follow-ups and readmit less |
 
-Run evidence: [`evidence/phase4/`](evidence/phase4/). Decisions #40-#44.
+Run evidence: [`evidence/phase4/`](evidence/phase4/). Decisions #40-#49.
 
 ## Synthetic EHR source simulator
 
@@ -253,11 +254,12 @@ Run evidence: [`evidence/phase4/`](evidence/phase4/). Decisions #40-#44.
 ├── patient/extract_date=YYYY-MM-DD/      mrn, demographics, primary_payer (every record: record_created_ts, record_updated_ts)
 ├── encounter/extract_date=YYYY-MM-DD/    inpatient (at admit, again at discharge) and ED visits
 ├── diagnosis/extract_date=YYYY-MM-DD/    ICD-10 codes per encounter, at discharge
-├── appointment/extract_date=YYYY-MM-DD/  follow-ups: SCHEDULED, then COMPLETED / NO_SHOW / CANCELLED
+├── appointment/extract_date=YYYY-MM-DD/  follow-ups: SCHEDULED, then COMPLETED / NO_SHOW / CANCELLED (APC* = booked by a care manager)
 └── _manifests/run_<id>.json              dates landed by each run, with row counts
 ```
 
 - **Story:** about 16% system-wide 30-day readmissions. Riverbend Community (rural) completes about 29% of 7-day follow-ups versus 48-55% elsewhere and readmits about 21%. Heart failure patients without a 7-day follow-up readmit at about 27%, versus about 15% with one. COPD and pneumonia readmissions rise in winter. Current numbers are in [`evidence/phase1/`](evidence/phase1/).
+- **Program response (generator v4):** the simulator reads REACHED calls back from `readmission_worklist_app_bronze.lb_outreach_activity_history`. A reached patient without a 7-day follow-up gets one booked by the care manager (65%), and the readmission risk drops for the call and, when attended within 7 days, for the visit. Outreach only prevents readmissions after the call, never adds them. See DECISIONS.md #45 and [`evidence/phase4/`](evidence/phase4/).
 - **Source shape:** natural keys only (`mrn`, `encounter_number`, `appointment_number`); every record carries `record_updated_ts` for change sequencing. About 0.5% of rows are deliberately bad (null keys, impossible dates, malformed codes, re-sent duplicates) for the bronze expectations to quarantine.
 - **Idempotent:** every random draw is a hash of a fixed seed and the row key, and stays are generated 46 days past `run_date`, so a given date always produces the same records. Each run lands only dates not yet listed in a manifest (removing partial folders from an interrupted run first) and lands any late-arriving records for recent dates. The first run backfills from `history_start`; later runs land only the new days.
 

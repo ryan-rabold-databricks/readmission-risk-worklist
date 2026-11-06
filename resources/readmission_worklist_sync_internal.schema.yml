@@ -1,0 +1,10 @@
+resources:
+  schemas:
+    readmission_worklist_sync_internal:
+      catalog_name: ${var.catalog}
+      name: readmission_worklist_sync_internal
+      comment: >-
+        Internal storage (event logs, staging tables) of the Lakebase synced-table
+        pipelines for the readmission worklist. Not a data product: no analyst grants,
+        not added to Genie, not tagged or masked. Keeps readmission_worklist_gold the
+        published contract (DECISIONS.md #48).

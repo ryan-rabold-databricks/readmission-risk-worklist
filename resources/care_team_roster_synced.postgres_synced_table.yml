@@ -14,4 +14,4 @@ resources:
       create_database_objects_if_missing: true
       new_pipeline_spec:
         storage_catalog: ${var.catalog}
-        storage_schema: readmission_worklist_gold
+        storage_schema: ${resources.schemas.readmission_worklist_sync_internal.name}
