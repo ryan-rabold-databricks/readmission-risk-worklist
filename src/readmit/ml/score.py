@@ -68,6 +68,9 @@ def score_worklist_date(
     policy = (
         spark.table(f"{catalog}.care_management_silver.risk_tier_policy")
         .filter("is_active")
+        # The policy version in effect on the worklist date (Program Settings changes are effective-dated).
+        .filter((F.col("effective_date") <= F.lit(worklist_date))
+                & (F.col("expiration_date").isNull() | (F.col("expiration_date") > F.lit(worklist_date))))
         .orderBy("min_score")
         .toPandas()
     )

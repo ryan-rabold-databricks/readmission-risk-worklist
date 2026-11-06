@@ -15,7 +15,7 @@ SEED_SCHEMAS: dict[str, str] = {
     "facility": "facility_id STRING, facility_name STRING, region STRING, bed_count INT, is_active BOOLEAN",
     "risk_tier_policy": (
         "risk_tier STRING, min_score DOUBLE, max_score DOUBLE, outreach_sla_hours INT, "
-        "include_in_worklist BOOLEAN, is_active BOOLEAN"
+        "include_in_worklist BOOLEAN, is_active BOOLEAN, effective_date DATE, expiration_date DATE"
     ),
     "care_team_assignment": (
         "care_manager_email STRING, facility_id STRING, effective_date DATE, expiration_date DATE"

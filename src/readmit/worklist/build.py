@@ -77,7 +77,7 @@ def build_worklist_date(spark: SparkSession, catalog: str, d: date, process: str
     roster = build_roster(spark, catalog, d, process)
     latest_first = Window.partitionBy("encounter_id").orderBy(F.desc("scored_at"))
     latest = scores.withColumn("_rn", F.row_number().over(latest_first)).filter("_rn = 1").drop("_rn")
-    policy = spark.table(f"{catalog}.care_management_silver.risk_tier_policy").filter("is_active")
+    policy = _active_on(spark.table(f"{catalog}.care_management_silver.risk_tier_policy").filter("is_active"), d)
     features = spark.table(f"{catalog}.readmission_worklist_gold.discharge_features").select(
         "encounter_id", "patient_id", "facility_id"
     )

@@ -1,0 +1,13 @@
+### program_setting
+change_id	setting_type	target_key	effective_date	status	status_reason
+ecccede8-0662-4d43-8c50-a83c6912eb7e	CARE_MANAGER_CAPACITY	ryan.rabold@databricks.com	2026-11-08	APPLIED	
+ecd8d715-4a48-4b5c-9c56-0e4cec06afb9	RISK_TIER_POLICY	ALL	2026-11-08	REJECTED	MEDIUM max_score must equal HIGH min_score
+### care_manager_capacity
+care_manager_email	daily_capacity	effective_date	expiration_date	audit_created_by	audit_created_process	audit_created_run_id
+ryan.rabold@databricks.com	50	2024-11-01	2026-11-08	ryan.rabold@databricks.com	dev_readmit_pipeline	seed:care_manager_capacity.csv
+ryan.rabold@databricks.com	50	2026-11-08		ryan.rabold@databricks.com	readmission_worklist_app	ecccede8-0662-4d43-8c50-a83c6912eb7e
+### risk_tier_policy (unchanged: tier-gap change rejected)
+risk_tier	effective_date	expiration_date	min_score	max_score
+HIGH	2024-11-01		0.3	1.0
+LOW	2024-11-01		0.0	0.18
+MEDIUM	2024-11-01		0.18	0.3

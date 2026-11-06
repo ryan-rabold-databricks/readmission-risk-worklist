@@ -1,0 +1,25 @@
+### Silver outreach_activity vs current bronze CDF state
+silver_rows	bronze_current	bad_uuid
+20800	20800	0
+### Postgres check: activity eddf6326-e9a9-549b-9933-d07921f091a0 found in readmission_worklist_app.outreach_activity with the same client_request_id
+### readmission_outcome grain and readmission id consistency
+n	distinct_enc	features	readmit_without_id	id_without_readmit
+113711	113711	113711	0	0
+### Outcome by status / worklist / reached
+outcome_status	was_on_worklist	was_reached	n	avg_contact_h
+NOT_READMITTED	false	false	87264	
+NOT_READMITTED	true	false	1911	
+NOT_READMITTED	true	true	3161	27.4
+PENDING	false	false	3122	
+PENDING	true	false	606	
+PENDING	true	true	859	25.5
+READMITTED	false	false	14685	
+READMITTED	true	false	821	
+READMITTED	true	true	1282	23.5
+### Program effect (matured worklist items; reached = REACHED, FOLLOWUP_BOOKED, or DECLINED)
+risk_tier	grp	items	readmit_pct	f7_pct	mean_pred_pct
+HIGH	assigned, not reached	1311	38.7	36.7	39.3
+HIGH	reached	2770	35.1	53.6	39.4
+MEDIUM	assigned, not reached	1148	23.0	45.3	24.1
+MEDIUM	overflow	273	17.9	46.5	20.0
+MEDIUM	reached	1673	18.5	61.6	24.0

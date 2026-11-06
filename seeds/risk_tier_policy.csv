@@ -1,4 +1,4 @@
-risk_tier,min_score,max_score,outreach_sla_hours,include_in_worklist,is_active
-HIGH,0.30,1.00,24,true,true
-MEDIUM,0.18,0.30,72,true,true
-LOW,0.00,0.18,168,false,true
+risk_tier,min_score,max_score,outreach_sla_hours,include_in_worklist,is_active,effective_date,expiration_date
+HIGH,0.30,1.00,24,true,true,2024-11-01,
+MEDIUM,0.18,0.30,72,true,true,2024-11-01,
+LOW,0.00,0.18,168,false,true,2024-11-01,

@@ -6,6 +6,7 @@ a follow-up within 7 days was booked by then). Outcome columns are filled in lat
   never a model input, DECISIONS.md #23).
 - readmit_30d: unplanned (non-elective) inpatient admission within 30 days of
   discharge; NULL until the 30-day window has passed in the data (label_matured_at).
+  readmit_encounter_id is the first such admission.
 Hospice discharges are excluded, as in CMS HRRP.
 """
 
@@ -34,7 +35,7 @@ def _days(n: int):
     name=settings.table("readmission_worklist_gold", "discharge_features"),
     comment=(
         "Inpatient discharges with model features (known at scoring time) and outcomes "
-        "(followup_within_7d, readmit_30d label, label_matured_at)."
+        "(followup_within_7d, readmit_30d label, readmit_encounter_id, label_matured_at)."
     ),
     schema=(
         "encounter_id STRING NOT NULL, patient_id STRING NOT NULL, facility_id STRING NOT NULL, "
@@ -42,7 +43,8 @@ def _days(n: int):
         "emergent_admission BOOLEAN NOT NULL, charlson_index INT NOT NULL, ed_visits_6m INT NOT NULL, "
         "inpatient_admits_12m INT NOT NULL, primary_condition_group STRING NOT NULL, discharge_disposition STRING, "
         "followup_scheduled_7d BOOLEAN NOT NULL, followup_within_7d BOOLEAN NOT NULL, "
-        f"readmit_30d BOOLEAN, label_matured_at TIMESTAMP, {AUDIT_SCHEMA}, "
+        "readmit_30d BOOLEAN, readmit_encounter_id STRING, label_matured_at TIMESTAMP, "
+        f"{AUDIT_SCHEMA}, "
         "CONSTRAINT discharge_features_pk PRIMARY KEY (encounter_id)"
     ),
     cluster_by=["facility_id", "discharge_date"],
@@ -139,8 +141,8 @@ def discharge_features():
             & (F.col("o_admit_ts") > F.col("discharge_ts"))
             & (F.col("o_admit_ts") <= F.col("discharge_ts") + _days(READMIT_WINDOW_DAYS)),
         )
-        .select("encounter_id")
-        .distinct()
+        .groupBy("encounter_id")
+        .agg(F.min_by("o_encounter_id", F.struct("o_admit_ts", "o_encounter_id")).alias("first_readmit_encounter_id"))
         .withColumn("readmitted", F.lit(True))
     )
 
@@ -176,6 +178,7 @@ def discharge_features():
             F.coalesce("followup_scheduled_7d", F.lit(False)).alias("followup_scheduled_7d"),
             F.coalesce("followup_within_7d", F.lit(False)).alias("followup_within_7d"),
             F.when(matured, F.coalesce("readmitted", F.lit(False))).alias("readmit_30d"),
+            F.when(matured, F.col("first_readmit_encounter_id")).alias("readmit_encounter_id"),
             F.when(matured, matures_at).alias("label_matured_at"),
             *refresh_audit_columns(
                 settings.pipeline_name,
