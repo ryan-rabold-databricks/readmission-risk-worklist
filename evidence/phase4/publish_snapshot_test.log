@@ -1,0 +1,32 @@
+{
+  "run_date": "2026-11-05",
+  "tables": {
+    "care_worklist_synced": {
+      "pipeline_id": "879de71d-4fcc-4193-be77-db0d160a3c3e",
+      "update_id": "8e95592b-70e0-459c-af53-603a86b1aca2",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 1510,
+        "day": 46
+      },
+      "pg_rows": {
+        "total": 1510,
+        "day": 46
+      }
+    },
+    "care_team_roster_synced": {
+      "pipeline_id": "f79c16f8-099a-442e-90a6-818465767e5f",
+      "update_id": "be84df77-5534-4b49-93cf-0e8f2526583f",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 150,
+        "day": 5
+      },
+      "pg_rows": {
+        "total": 150,
+        "day": 5
+      }
+    }
+  }
+}
+Publish timing: the two snapshot updates ran in the window shown above (first to last pipeline event).
