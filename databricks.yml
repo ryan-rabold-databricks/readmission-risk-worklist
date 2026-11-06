@@ -15,6 +15,10 @@ sync:
     - evidence/**
     - tests/**
     - .isaac/**
+    - src/app/node_modules/**
+    - src/app/dist/**
+    - src/app/client/dist/**
+    - src/app/.env
 
 artifacts:
   readmit_wheel:

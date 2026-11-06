@@ -1,0 +1,51 @@
+# Databricks App <env>-readmission-worklist (AppKit): Worklist, Program, Program Settings.
+# - Worklist and Program Settings writes go through Lakebase as the app's service
+#   principal (readmission_worklist_app grants from <env>_readmit_setup --params app_role=<client id>);
+#   every worklist query is scoped to the signed-in user's facilities in care_team_roster_synced.
+# - Program tab and current settings read Unity Catalog through the warehouse on behalf of
+#   the signed-in user (user_api_scopes: sql), so UC grants and Phase 6 ABAC policies apply.
+# - App telemetry (OpenTelemetry, incl. audit.* log records) lands in readmission_worklist_app_bronze.
+
+resources:
+  apps:
+    readmission_worklist_app:
+      name: ${var.env}-readmission-worklist
+      description: Readmission Prevention Worklist - care manager worklist, program outcomes, program settings.
+      source_code_path: ../src/app
+      user_api_scopes:
+        - sql
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${resources.sql_warehouses.readmit_wh.id}
+            permission: CAN_USE
+        - name: postgres
+          postgres:
+            branch: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}
+            database: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}/databases/${var.lakebase_database_id}
+            permission: CAN_CONNECT_AND_CREATE
+      telemetry_export_destinations:
+        - unity_catalog:
+            logs_table: ${var.catalog}.${resources.schemas.readmission_worklist_app_bronze.name}.app_otel_logs
+            metrics_table: ${var.catalog}.${resources.schemas.readmission_worklist_app_bronze.name}.app_otel_metrics
+            traces_table: ${var.catalog}.${resources.schemas.readmission_worklist_app_bronze.name}.app_otel_traces
+      config:
+        command: ["npm", "run", "start"]
+        env:
+          - name: DATABRICKS_WAREHOUSE_ID
+            value_from: sql-warehouse
+          - name: LAKEBASE_ENDPOINT
+            value_from: postgres
+          - name: READMIT_ENV
+            value: ${var.env}
+          - name: READMIT_CATALOG
+            value: ${var.catalog}
+          - name: READMIT_PROGRAM_GO_LIVE
+            value: ${var.program_go_live}
+          - name: READMIT_AVG_READMISSION_COST
+            value: ${var.avg_readmission_cost}
+          - name: READMIT_LEADERSHIP_GROUP
+            value: care_mgmt_leadership
+          # The default parent-based sampler can leave the traces table empty (Apps observability docs).
+          - name: OTEL_TRACES_SAMPLER
+            value: always_on
