@@ -1,0 +1,41 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/784629681856429/runs/499919760177555?o=7474647046080636
+
+2026-11-06 12:22:35 "dev_readmit_source_simulator" RUNNING
+2026-11-06 12:28:40 "dev_readmit_source_simulator" TERMINATED SUCCESS
+env=dev catalog=rtr_demo_catalog history_start=2024-11-01 run_date=2026-11-05
+Program response input: 4981 reached worklist items
+Removed 117 partial date folders from an interrupted run.
+Landed patient
+Landed encounter
+Landed diagnosis
+Landed appointment
+Landed 735 new extract dates (2024-11-01 to 2026-11-05); manifest /Volumes/rtr_demo_catalog/ehr_raw/ehr_landing/_manifests/run_20261106T172824Z_897de29f.json
+  patient: 71,899 records
+  encounter: 322,808 records
+  diagnosis: 560,050 records
+  appointment: 196,890 records
+== Story checks (matured, non-hospice inpatient stays) ==
+Overall: stays=109,124 readmits=18,171 rate=16.7% followup_7d=49.5% est_readmission_cost=$272,565,000
+By facility:
+  FAC-CCH | stays=13,354 | readmit_30d=16.8% | followup_7d=48.3%
+  FAC-LMC | stays=36,702 | readmit_30d=15.9% | followup_7d=55.4%
+  FAC-NGR | stays=25,662 | readmit_30d=15.6% | followup_7d=51.8%
+  FAC-RCH | stays=11,377 | readmit_30d=21.6% | followup_7d=29.3%
+  FAC-SVH | stays=22,029 | readmit_30d=16.5% | followup_7d=48.3%
+By condition group:
+  ami | stays=5,583 | readmit_30d=16.4% | followup_7d=50.3%
+  copd | stays=11,723 | readmit_30d=21.6% | followup_7d=49.3%
+  diabetes | stays=6,016 | readmit_30d=16.7% | followup_7d=49.2%
+  gi | stays=10,831 | readmit_30d=14.2% | followup_7d=49.6%
+  heart_failure | stays=15,539 | readmit_30d=22.3% | followup_7d=48.8%
+  ortho_surgery | stays=11,714 | readmit_30d=9.0% | followup_7d=50.7%
+  other | stays=27,739 | readmit_30d=13.3% | followup_7d=49.6%
+  pneumonia | stays=10,865 | readmit_30d=19.1% | followup_7d=49.7%
+  sepsis | stays=9,114 | readmit_30d=21.0% | followup_7d=48.7%
+Heart failure by 7-day follow-up:
+  followup_7d=False | stays=7,959 | readmit_30d=26.7% | followup_7d=0.0%
+  followup_7d=True | stays=7,580 | readmit_30d=17.6% | followup_7d=100.0%
+COPD + pneumonia by season:
+  winter=False | stays=14,362 | readmit_30d=19.4% | followup_7d=49.2%
+  winter=True | stays=8,226 | readmit_30d=22.1% | followup_7d=50.0%
+Program response: reached index stays=3752, care-manager follow-ups booked=1468, readmissions prevented=240

@@ -1,0 +1,5 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/784629681856429/runs/127506138075603?o=7474647046080636
+
+2026-11-06 11:21:37 "dev_readmit_source_simulator" RUNNING
+2026-11-06 12:22:06 "dev_readmit_source_simulator" INTERNAL_ERROR TIMEDOUT Task land_ehr_extracts failed with message: Run timed out.
+Error: failed to reach TERMINATED or SKIPPED, got INTERNAL_ERROR: Task land_ehr_extracts failed with message: Run timed out.

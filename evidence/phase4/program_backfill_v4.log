@@ -1,0 +1,402 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/62309725985514/runs/160446129816449?o=7474647046080636
+
+2026-11-06 12:31:37 "dev_readmit_program_backfill" RUNNING
+2026-11-06 13:49:35 "dev_readmit_program_backfill" TERMINATED SUCCESS
+{"ts": "2026-11-06 17:32:18.166", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cihqb2JzLzYyMzA5NzI1OTg1NTE0L3J1bnMvMTYwNDQ2MTI5ODE2NDQ5EAEgASokY2Y3YWJhYTYtZjY5MC00ZDkwLWFhMWQtMGQyMzRhZTRjN2YxMiQwMWExYjFlYS04MWU1LTc4NDEtOTkzMy02M2MxZTZkMjgwMDc6JGRiMTRmNzgyLTgwODYtM2NjNC1iYzhlLTYwNDkyOTdmYzIzNkIkY2Y3YWJhYTYtZjY5MC00ZDkwLWFhMWQtMGQyMzRhZTRjN2YxSgwI+p241wYQwP7MogFQAlgBYAFo/JCDkO7Eow2IAQA=.", "context": {}}
+{"ts": "2026-11-06 17:32:18.166", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cihqb2JzLzYyMzA5NzI1OTg1NTE0L3J1bnMvMTYwNDQ2MTI5ODE2NDQ5EAEgASokY2Y3YWJhYTYtZjY5MC00ZDkwLWFhMWQtMGQyMzRhZTRjN2YxMiQwMWExYjFlYS04MWU1LTc4NDEtOTkzMy02M2MxZTZkMjgwMDc6JGRiMTRmNzgyLTgwODYtM2NjNC1iYzhlLTYwNDkyOTdmYzIzNkIkY2Y3YWJhYTYtZjY5MC00ZDkwLWFhMWQtMGQyMzRhZTRjN2YxSgwI+p241wYQwP7MogFQAlgBYAFo/JCDkO7Eow2IAQA=.", "context": {}}
+{"ts": "2026-11-06 17:32:18.166", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cihqb2JzLzYyMzA5NzI1OTg1NTE0L3J1bnMvMTYwNDQ2MTI5ODE2NDQ5EAEgASokY2Y3YWJhYTYtZjY5MC00ZDkwLWFhMWQtMGQyMzRhZTRjN2YxMiQwMWExYjFlYS04MWU1LTc4NDEtOTkzMy02M2MxZTZkMjgwMDc6JGRiMTRmNzgyLTgwODYtM2NjNC1iYzhlLTYwNDkyOTdmYzIzNkIkY2Y3YWJhYTYtZjY5MC00ZDkwLWFhMWQtMGQyMzRhZTRjN2YxSgwI+p241wYQwP7MogFQAlgBYAFo/JCDkO7Eow2IAQA=.", "context": {}}
+
+
+== Month starting 2026-05-01: monthly retrain as of 2026-05-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-a278c12d60cf4ddf97b798380f3d7e46?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '10' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/10?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-05-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/dd2d1c68d9e04ab18a37a3ca16404bb2
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v10 as_of=2026-05-01
+promoted=True champion=v10
+rows: {'train': 11761, 'validation': 3142, 'test': 9944}  windows: {'train': '2025-11-01..2026-01-11', 'validation': '2026-01-12..2026-01-29', 'test': '2026-01-30..2026-03-31'}
+test AUC=0.7498 Brier=0.11881 calibration slope=1.064 intercept=0.001 observed=16.030% mean_predicted=17.065%
+gate: AUC 0.7498 >= minimum 0.68
+gate: calibration slope 1.064 inside [0.8, 1.2]
+decile | n | mean_predicted | observed_rate
+     1 |   995 | 0.051 | 0.045
+     2 |   995 | 0.065 | 0.045
+     3 |   995 | 0.077 | 0.056
+     4 |   995 | 0.090 | 0.079
+     5 |   994 | 0.105 | 0.095
+     6 |   994 | 0.127 | 0.102
+     7 |   994 | 0.169 | 0.199
+     8 |   994 | 0.242 | 0.230
+     9 |   994 | 0.337 | 0.325
+    10 |   994 | 0.443 | 0.427
+then-current champion for 2026-05-01: v10
+2026-05-01: scored=181 v10 worklist={'worklist_date': '2026-05-01', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-05-02: scored=159 v10 worklist={'worklist_date': '2026-05-02', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-05-03: scored=104 v10 worklist={'worklist_date': '2026-05-03', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-05-04: scored=124 v10 worklist={'worklist_date': '2026-05-04', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-05-05: scored=140 v10 worklist={'worklist_date': '2026-05-05', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-05-06: scored=164 v10 worklist={'worklist_date': '2026-05-06', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-05-07: scored=164 v10 worklist={'worklist_date': '2026-05-07', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-05-08: scored=177 v10 worklist={'worklist_date': '2026-05-08', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-05-09: scored=185 v10 worklist={'worklist_date': '2026-05-09', 'items': 66, 'ASSIGNED': 50, 'OVERFLOW': 16, 'roster_capacity': 50}
+2026-05-10: scored=107 v10 worklist={'worklist_date': '2026-05-10', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-05-11: scored=108 v10 worklist={'worklist_date': '2026-05-11', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-05-12: scored=180 v10 worklist={'worklist_date': '2026-05-12', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-05-13: scored=168 v10 worklist={'worklist_date': '2026-05-13', 'items': 65, 'ASSIGNED': 50, 'OVERFLOW': 15, 'roster_capacity': 50}
+2026-05-14: scored=178 v10 worklist={'worklist_date': '2026-05-14', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-05-15: scored=196 v10 worklist={'worklist_date': '2026-05-15', 'items': 72, 'ASSIGNED': 50, 'OVERFLOW': 22, 'roster_capacity': 50}
+2026-05-16: scored=180 v10 worklist={'worklist_date': '2026-05-16', 'items': 63, 'ASSIGNED': 50, 'OVERFLOW': 13, 'roster_capacity': 50}
+2026-05-17: scored=101 v10 worklist={'worklist_date': '2026-05-17', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-05-18: scored=107 v10 worklist={'worklist_date': '2026-05-18', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-05-19: scored=176 v10 worklist={'worklist_date': '2026-05-19', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-05-20: scored=176 v10 worklist={'worklist_date': '2026-05-20', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-05-21: scored=177 v10 worklist={'worklist_date': '2026-05-21', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-05-22: scored=167 v10 worklist={'worklist_date': '2026-05-22', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-05-23: scored=165 v10 worklist={'worklist_date': '2026-05-23', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-05-24: scored=121 v10 worklist={'worklist_date': '2026-05-24', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-05-25: scored=113 v10 worklist={'worklist_date': '2026-05-25', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-05-26: scored=149 v10 worklist={'worklist_date': '2026-05-26', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-05-27: scored=177 v10 worklist={'worklist_date': '2026-05-27', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-05-28: scored=151 v10 worklist={'worklist_date': '2026-05-28', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-05-29: scored=150 v10 worklist={'worklist_date': '2026-05-29', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-05-30: scored=167 v10 worklist={'worklist_date': '2026-05-30', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-05-31: scored=122 v10 worklist={'worklist_date': '2026-05-31', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+== Month starting 2026-06-01: monthly retrain as of 2026-06-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-1c24f509ab854c7f9047d7d39228d80d?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '11' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/11?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-06-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/cc2c57815be847fb8184aab748c4b451
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v11 as_of=2026-06-01
+promoted=True champion=v11
+rows: {'train': 16049, 'validation': 4121, 'test': 9429}  windows: {'train': '2025-11-01..2026-02-05', 'validation': '2026-02-06..2026-03-01', 'test': '2026-03-02..2026-05-01'}
+test AUC=0.7509 Brier=0.11422 calibration slope=1.048 intercept=-0.036 observed=15.399% mean_predicted=16.603%
+champion v10 on same test: AUC=0.7491 Brier=0.11472
+gate: AUC 0.7509 vs champion 0.7491 (>= floor 0.7441)
+gate: Brier 0.11422 vs champion 0.11472 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   943 | 0.046 | 0.041
+     2 |   943 | 0.059 | 0.068
+     3 |   943 | 0.071 | 0.042
+     4 |   943 | 0.084 | 0.071
+     5 |   943 | 0.099 | 0.088
+     6 |   943 | 0.123 | 0.102
+     7 |   943 | 0.164 | 0.156
+     8 |   943 | 0.236 | 0.201
+     9 |   943 | 0.332 | 0.329
+    10 |   942 | 0.446 | 0.442
+then-current champion for 2026-06-01: v11
+2026-06-01: scored=117 v11 worklist={'worklist_date': '2026-06-01', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-06-02: scored=177 v11 worklist={'worklist_date': '2026-06-02', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-06-03: scored=170 v11 worklist={'worklist_date': '2026-06-03', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-06-04: scored=162 v11 worklist={'worklist_date': '2026-06-04', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-06-05: scored=133 v11 worklist={'worklist_date': '2026-06-05', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-06-06: scored=178 v11 worklist={'worklist_date': '2026-06-06', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-06-07: scored=105 v11 worklist={'worklist_date': '2026-06-07', 'items': 33, 'ASSIGNED': 33, 'roster_capacity': 50}
+2026-06-08: scored=113 v11 worklist={'worklist_date': '2026-06-08', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-06-09: scored=150 v11 worklist={'worklist_date': '2026-06-09', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-06-10: scored=176 v11 worklist={'worklist_date': '2026-06-10', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-06-11: scored=161 v11 worklist={'worklist_date': '2026-06-11', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-06-12: scored=151 v11 worklist={'worklist_date': '2026-06-12', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-06-13: scored=158 v11 worklist={'worklist_date': '2026-06-13', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-06-14: scored=105 v11 worklist={'worklist_date': '2026-06-14', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-06-15: scored=112 v11 worklist={'worklist_date': '2026-06-15', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-06-16: scored=157 v11 worklist={'worklist_date': '2026-06-16', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-06-17: scored=156 v11 worklist={'worklist_date': '2026-06-17', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-06-18: scored=167 v11 worklist={'worklist_date': '2026-06-18', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-06-19: scored=151 v11 worklist={'worklist_date': '2026-06-19', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-06-20: scored=184 v11 worklist={'worklist_date': '2026-06-20', 'items': 64, 'ASSIGNED': 50, 'OVERFLOW': 14, 'roster_capacity': 50}
+2026-06-21: scored=114 v11 worklist={'worklist_date': '2026-06-21', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-06-22: scored=100 v11 worklist={'worklist_date': '2026-06-22', 'items': 25, 'ASSIGNED': 25, 'roster_capacity': 50}
+2026-06-23: scored=150 v11 worklist={'worklist_date': '2026-06-23', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-06-24: scored=157 v11 worklist={'worklist_date': '2026-06-24', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-06-25: scored=158 v11 worklist={'worklist_date': '2026-06-25', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-06-26: scored=139 v11 worklist={'worklist_date': '2026-06-26', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-06-27: scored=148 v11 worklist={'worklist_date': '2026-06-27', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-06-28: scored=110 v11 worklist={'worklist_date': '2026-06-28', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+2026-06-29: scored=112 v11 worklist={'worklist_date': '2026-06-29', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+2026-06-30: scored=174 v11 worklist={'worklist_date': '2026-06-30', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+== Month starting 2026-07-01: monthly retrain as of 2026-07-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-f9f128f417834f3cb58472d66713b454?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '12' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/12?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-07-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/7f45a007f959447bb1e9f217c26bf694
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v12 as_of=2026-07-01
+promoted=True champion=v12
+rows: {'train': 19740, 'validation': 5107, 'test': 9263}  windows: {'train': '2025-11-01..2026-02-26', 'validation': '2026-02-27..2026-03-31', 'test': '2026-04-01..2026-05-31'}
+test AUC=0.7403 Brier=0.10977 calibration slope=0.964 intercept=-0.198 observed=14.369% mean_predicted=16.058%
+champion v11 on same test: AUC=0.7394 Brier=0.11006
+gate: AUC 0.7403 vs champion 0.7394 (>= floor 0.7344)
+gate: Brier 0.10977 vs champion 0.11006 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   927 | 0.041 | 0.045
+     2 |   927 | 0.053 | 0.047
+     3 |   927 | 0.064 | 0.064
+     4 |   926 | 0.077 | 0.078
+     5 |   926 | 0.093 | 0.070
+     6 |   926 | 0.117 | 0.105
+     7 |   926 | 0.160 | 0.139
+     8 |   926 | 0.232 | 0.183
+     9 |   926 | 0.324 | 0.305
+    10 |   926 | 0.446 | 0.402
+then-current champion for 2026-07-01: v12
+2026-07-01: scored=159 v12 worklist={'worklist_date': '2026-07-01', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-07-02: scored=154 v12 worklist={'worklist_date': '2026-07-02', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-07-03: scored=147 v12 worklist={'worklist_date': '2026-07-03', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-07-04: scored=154 v12 worklist={'worklist_date': '2026-07-04', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-07-05: scored=97 v12 worklist={'worklist_date': '2026-07-05', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-07-06: scored=120 v12 worklist={'worklist_date': '2026-07-06', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-07-07: scored=156 v12 worklist={'worklist_date': '2026-07-07', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-07-08: scored=180 v12 worklist={'worklist_date': '2026-07-08', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-07-09: scored=162 v12 worklist={'worklist_date': '2026-07-09', 'items': 61, 'ASSIGNED': 50, 'OVERFLOW': 11, 'roster_capacity': 50}
+2026-07-10: scored=151 v12 worklist={'worklist_date': '2026-07-10', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-07-11: scored=139 v12 worklist={'worklist_date': '2026-07-11', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-07-12: scored=100 v12 worklist={'worklist_date': '2026-07-12', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-07-13: scored=96 v12 worklist={'worklist_date': '2026-07-13', 'items': 27, 'ASSIGNED': 27, 'roster_capacity': 50}
+2026-07-14: scored=148 v12 worklist={'worklist_date': '2026-07-14', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+2026-07-15: scored=165 v12 worklist={'worklist_date': '2026-07-15', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-07-16: scored=156 v12 worklist={'worklist_date': '2026-07-16', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-07-17: scored=145 v12 worklist={'worklist_date': '2026-07-17', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-07-18: scored=160 v12 worklist={'worklist_date': '2026-07-18', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-07-19: scored=98 v12 worklist={'worklist_date': '2026-07-19', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-07-20: scored=110 v12 worklist={'worklist_date': '2026-07-20', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-07-21: scored=155 v12 worklist={'worklist_date': '2026-07-21', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-07-22: scored=152 v12 worklist={'worklist_date': '2026-07-22', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-07-23: scored=153 v12 worklist={'worklist_date': '2026-07-23', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+2026-07-24: scored=152 v12 worklist={'worklist_date': '2026-07-24', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-07-25: scored=153 v12 worklist={'worklist_date': '2026-07-25', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-07-26: scored=106 v12 worklist={'worklist_date': '2026-07-26', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-07-27: scored=101 v12 worklist={'worklist_date': '2026-07-27', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-07-28: scored=166 v12 worklist={'worklist_date': '2026-07-28', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-07-29: scored=163 v12 worklist={'worklist_date': '2026-07-29', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-07-30: scored=165 v12 worklist={'worklist_date': '2026-07-30', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-07-31: scored=157 v12 worklist={'worklist_date': '2026-07-31', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+== Month starting 2026-08-01: monthly retrain as of 2026-08-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-a0c49371d2104f579db945247bd42b67?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '13' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/13?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-08-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/ffc203508254407688d1d7779e048a56
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v13 as_of=2026-08-01
+promoted=True champion=v13
+rows: {'train': 23613, 'validation': 5986, 'test': 9052}  windows: {'train': '2025-11-01..2026-03-23', 'validation': '2026-03-24..2026-05-01', 'test': '2026-05-02..2026-07-01'}
+test AUC=0.7419 Brier=0.10845 calibration slope=0.956 intercept=-0.238 observed=14.030% mean_predicted=16.041%
+champion v12 on same test: AUC=0.7392 Brier=0.10886
+gate: AUC 0.7419 vs champion 0.7392 (>= floor 0.7342)
+gate: Brier 0.10845 vs champion 0.10886 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   906 | 0.041 | 0.041
+     2 |   906 | 0.052 | 0.042
+     3 |   905 | 0.064 | 0.056
+     4 |   905 | 0.076 | 0.083
+     5 |   905 | 0.091 | 0.066
+     6 |   905 | 0.116 | 0.096
+     7 |   905 | 0.159 | 0.136
+     8 |   905 | 0.233 | 0.204
+     9 |   905 | 0.329 | 0.292
+    10 |   905 | 0.444 | 0.387
+then-current champion for 2026-08-01: v13
+2026-08-01: scored=155 v13 worklist={'worklist_date': '2026-08-01', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-08-02: scored=100 v13 worklist={'worklist_date': '2026-08-02', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-08-03: scored=101 v13 worklist={'worklist_date': '2026-08-03', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-08-04: scored=153 v13 worklist={'worklist_date': '2026-08-04', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-08-05: scored=158 v13 worklist={'worklist_date': '2026-08-05', 'items': 56, 'ASSIGNED': 50, 'OVERFLOW': 6, 'roster_capacity': 50}
+2026-08-06: scored=174 v13 worklist={'worklist_date': '2026-08-06', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-08-07: scored=140 v13 worklist={'worklist_date': '2026-08-07', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-08-08: scored=138 v13 worklist={'worklist_date': '2026-08-08', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-08-09: scored=108 v13 worklist={'worklist_date': '2026-08-09', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-08-10: scored=97 v13 worklist={'worklist_date': '2026-08-10', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-08-11: scored=149 v13 worklist={'worklist_date': '2026-08-11', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-08-12: scored=157 v13 worklist={'worklist_date': '2026-08-12', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-08-13: scored=144 v13 worklist={'worklist_date': '2026-08-13', 'items': 41, 'ASSIGNED': 41, 'roster_capacity': 50}
+2026-08-14: scored=155 v13 worklist={'worklist_date': '2026-08-14', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-08-15: scored=160 v13 worklist={'worklist_date': '2026-08-15', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-08-16: scored=102 v13 worklist={'worklist_date': '2026-08-16', 'items': 28, 'ASSIGNED': 28, 'roster_capacity': 50}
+2026-08-17: scored=116 v13 worklist={'worklist_date': '2026-08-17', 'items': 26, 'ASSIGNED': 26, 'roster_capacity': 50}
+2026-08-18: scored=162 v13 worklist={'worklist_date': '2026-08-18', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-08-19: scored=164 v13 worklist={'worklist_date': '2026-08-19', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-08-20: scored=157 v13 worklist={'worklist_date': '2026-08-20', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-08-21: scored=162 v13 worklist={'worklist_date': '2026-08-21', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-08-22: scored=155 v13 worklist={'worklist_date': '2026-08-22', 'items': 44, 'ASSIGNED': 44, 'roster_capacity': 50}
+2026-08-23: scored=101 v13 worklist={'worklist_date': '2026-08-23', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-08-24: scored=117 v13 worklist={'worklist_date': '2026-08-24', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-08-25: scored=155 v13 worklist={'worklist_date': '2026-08-25', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-08-26: scored=164 v13 worklist={'worklist_date': '2026-08-26', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-08-27: scored=170 v13 worklist={'worklist_date': '2026-08-27', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-08-28: scored=159 v13 worklist={'worklist_date': '2026-08-28', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-08-29: scored=151 v13 worklist={'worklist_date': '2026-08-29', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-08-30: scored=104 v13 worklist={'worklist_date': '2026-08-30', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-08-31: scored=112 v13 worklist={'worklist_date': '2026-08-31', 'items': 34, 'ASSIGNED': 34, 'roster_capacity': 50}
+== Month starting 2026-09-01: monthly retrain as of 2026-09-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-124cb2488eb945e5a89d33d04836e807?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '14' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/14?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-09-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/ff8f33abc563466099d284227a47de3f
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v14 as_of=2026-09-01
+promoted=True champion=v14
+rows: {'train': 27301, 'validation': 6986, 'test': 8726}  windows: {'train': '2025-11-01..2026-04-16', 'validation': '2026-04-17..2026-06-01', 'test': '2026-06-02..2026-08-01'}
+test AUC=0.7389 Brier=0.10940 calibration slope=0.991 intercept=-0.157 observed=14.153% mean_predicted=15.791%
+champion v13 on same test: AUC=0.7398 Brier=0.10946
+gate: AUC 0.7389 vs champion 0.7398 (>= floor 0.7348)
+gate: Brier 0.10940 vs champion 0.10946 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   873 | 0.047 | 0.044
+     2 |   873 | 0.056 | 0.054
+     3 |   873 | 0.066 | 0.055
+     4 |   873 | 0.078 | 0.063
+     5 |   873 | 0.093 | 0.071
+     6 |   873 | 0.115 | 0.103
+     7 |   872 | 0.155 | 0.149
+     8 |   872 | 0.226 | 0.200
+     9 |   872 | 0.320 | 0.294
+    10 |   872 | 0.425 | 0.384
+then-current champion for 2026-09-01: v14
+2026-09-01: scored=163 v14 worklist={'worklist_date': '2026-09-01', 'items': 61, 'ASSIGNED': 50, 'OVERFLOW': 11, 'roster_capacity': 50}
+2026-09-02: scored=163 v14 worklist={'worklist_date': '2026-09-02', 'items': 45, 'ASSIGNED': 45, 'roster_capacity': 50}
+2026-09-03: scored=159 v14 worklist={'worklist_date': '2026-09-03', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-09-04: scored=183 v14 worklist={'worklist_date': '2026-09-04', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-09-05: scored=179 v14 worklist={'worklist_date': '2026-09-05', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-09-06: scored=114 v14 worklist={'worklist_date': '2026-09-06', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-09-07: scored=97 v14 worklist={'worklist_date': '2026-09-07', 'items': 26, 'ASSIGNED': 26, 'roster_capacity': 50}
+2026-09-08: scored=157 v14 worklist={'worklist_date': '2026-09-08', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-09-09: scored=182 v14 worklist={'worklist_date': '2026-09-09', 'items': 60, 'ASSIGNED': 50, 'OVERFLOW': 10, 'roster_capacity': 50}
+2026-09-10: scored=158 v14 worklist={'worklist_date': '2026-09-10', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-09-11: scored=166 v14 worklist={'worklist_date': '2026-09-11', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-09-12: scored=165 v14 worklist={'worklist_date': '2026-09-12', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-09-13: scored=112 v14 worklist={'worklist_date': '2026-09-13', 'items': 30, 'ASSIGNED': 30, 'roster_capacity': 50}
+2026-09-14: scored=102 v14 worklist={'worklist_date': '2026-09-14', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-09-15: scored=168 v14 worklist={'worklist_date': '2026-09-15', 'items': 48, 'ASSIGNED': 48, 'roster_capacity': 50}
+2026-09-16: scored=155 v14 worklist={'worklist_date': '2026-09-16', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-09-17: scored=134 v14 worklist={'worklist_date': '2026-09-17', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-09-18: scored=174 v14 worklist={'worklist_date': '2026-09-18', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-09-19: scored=171 v14 worklist={'worklist_date': '2026-09-19', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-09-20: scored=120 v14 worklist={'worklist_date': '2026-09-20', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-09-21: scored=105 v14 worklist={'worklist_date': '2026-09-21', 'items': 31, 'ASSIGNED': 31, 'roster_capacity': 50}
+2026-09-22: scored=159 v14 worklist={'worklist_date': '2026-09-22', 'items': 36, 'ASSIGNED': 36, 'roster_capacity': 50}
+2026-09-23: scored=154 v14 worklist={'worklist_date': '2026-09-23', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-09-24: scored=183 v14 worklist={'worklist_date': '2026-09-24', 'items': 61, 'ASSIGNED': 50, 'OVERFLOW': 11, 'roster_capacity': 50}
+2026-09-25: scored=181 v14 worklist={'worklist_date': '2026-09-25', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-09-26: scored=187 v14 worklist={'worklist_date': '2026-09-26', 'items': 60, 'ASSIGNED': 50, 'OVERFLOW': 10, 'roster_capacity': 50}
+2026-09-27: scored=113 v14 worklist={'worklist_date': '2026-09-27', 'items': 28, 'ASSIGNED': 28, 'roster_capacity': 50}
+2026-09-28: scored=95 v14 worklist={'worklist_date': '2026-09-28', 'items': 32, 'ASSIGNED': 32, 'roster_capacity': 50}
+2026-09-29: scored=183 v14 worklist={'worklist_date': '2026-09-29', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-09-30: scored=158 v14 worklist={'worklist_date': '2026-09-30', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+== Month starting 2026-10-01: monthly retrain as of 2026-10-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-29b9835294be445f89207f2b3ee97288?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '15' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/15?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-10-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/d9e969fc74964e3593e0123817bf2a3c
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v15 as_of=2026-10-01
+promoted=True champion=v15
+rows: {'train': 30872, 'validation': 7779, 'test': 8610}  windows: {'train': '2025-11-01..2026-05-10', 'validation': '2026-05-11..2026-07-01', 'test': '2026-07-02..2026-08-31'}
+test AUC=0.7354 Brier=0.11194 calibration slope=0.946 intercept=-0.157 observed=14.564% mean_predicted=15.465%
+champion v14 on same test: AUC=0.7345 Brier=0.11210
+gate: AUC 0.7354 vs champion 0.7345 (>= floor 0.7295)
+gate: Brier 0.11194 vs champion 0.11210 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   861 | 0.044 | 0.046
+     2 |   861 | 0.053 | 0.052
+     3 |   861 | 0.063 | 0.058
+     4 |   861 | 0.074 | 0.065
+     5 |   861 | 0.089 | 0.087
+     6 |   861 | 0.111 | 0.105
+     7 |   861 | 0.150 | 0.159
+     8 |   861 | 0.221 | 0.196
+     9 |   861 | 0.313 | 0.285
+    10 |   861 | 0.430 | 0.403
+then-current champion for 2026-10-01: v15
+2026-10-01: scored=190 v15 worklist={'worklist_date': '2026-10-01', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-10-02: scored=157 v15 worklist={'worklist_date': '2026-10-02', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+2026-10-03: scored=172 v15 worklist={'worklist_date': '2026-10-03', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+2026-10-04: scored=108 v15 worklist={'worklist_date': '2026-10-04', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+2026-10-05: scored=114 v15 worklist={'worklist_date': '2026-10-05', 'items': 37, 'ASSIGNED': 37, 'roster_capacity': 50}
+2026-10-06: scored=196 v15 worklist={'worklist_date': '2026-10-06', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-10-07: scored=191 v15 worklist={'worklist_date': '2026-10-07', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-10-08: scored=165 v15 worklist={'worklist_date': '2026-10-08', 'items': 52, 'ASSIGNED': 50, 'OVERFLOW': 2, 'roster_capacity': 50}
+2026-10-09: scored=202 v15 worklist={'worklist_date': '2026-10-09', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-10-10: scored=164 v15 worklist={'worklist_date': '2026-10-10', 'items': 55, 'ASSIGNED': 50, 'OVERFLOW': 5, 'roster_capacity': 50}
+2026-10-11: scored=113 v15 worklist={'worklist_date': '2026-10-11', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-10-12: scored=126 v15 worklist={'worklist_date': '2026-10-12', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-10-13: scored=168 v15 worklist={'worklist_date': '2026-10-13', 'items': 62, 'ASSIGNED': 50, 'OVERFLOW': 12, 'roster_capacity': 50}
+2026-10-14: scored=178 v15 worklist={'worklist_date': '2026-10-14', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-10-15: scored=194 v15 worklist={'worklist_date': '2026-10-15', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+2026-10-16: scored=153 v15 worklist={'worklist_date': '2026-10-16', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-10-17: scored=163 v15 worklist={'worklist_date': '2026-10-17', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-10-18: scored=113 v15 worklist={'worklist_date': '2026-10-18', 'items': 40, 'ASSIGNED': 40, 'roster_capacity': 50}
+2026-10-19: scored=125 v15 worklist={'worklist_date': '2026-10-19', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-10-20: scored=167 v15 worklist={'worklist_date': '2026-10-20', 'items': 60, 'ASSIGNED': 50, 'OVERFLOW': 10, 'roster_capacity': 50}
+2026-10-21: scored=139 v15 worklist={'worklist_date': '2026-10-21', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+2026-10-22: scored=156 v15 worklist={'worklist_date': '2026-10-22', 'items': 54, 'ASSIGNED': 50, 'OVERFLOW': 4, 'roster_capacity': 50}
+2026-10-23: scored=186 v15 worklist={'worklist_date': '2026-10-23', 'items': 46, 'ASSIGNED': 46, 'roster_capacity': 50}
+2026-10-24: scored=154 v15 worklist={'worklist_date': '2026-10-24', 'items': 53, 'ASSIGNED': 50, 'OVERFLOW': 3, 'roster_capacity': 50}
+2026-10-25: scored=104 v15 worklist={'worklist_date': '2026-10-25', 'items': 33, 'ASSIGNED': 33, 'roster_capacity': 50}
+2026-10-26: scored=103 v15 worklist={'worklist_date': '2026-10-26', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+2026-10-27: scored=182 v15 worklist={'worklist_date': '2026-10-27', 'items': 62, 'ASSIGNED': 50, 'OVERFLOW': 12, 'roster_capacity': 50}
+2026-10-28: scored=159 v15 worklist={'worklist_date': '2026-10-28', 'items': 51, 'ASSIGNED': 50, 'OVERFLOW': 1, 'roster_capacity': 50}
+2026-10-29: scored=170 v15 worklist={'worklist_date': '2026-10-29', 'items': 57, 'ASSIGNED': 50, 'OVERFLOW': 7, 'roster_capacity': 50}
+2026-10-30: scored=143 v15 worklist={'worklist_date': '2026-10-30', 'items': 38, 'ASSIGNED': 38, 'roster_capacity': 50}
+2026-10-31: scored=172 v15 worklist={'worklist_date': '2026-10-31', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+== Month starting 2026-11-01: monthly retrain as of 2026-11-01
+
+
+🔗 View Logged Model at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/models/m-21a8b1138fb94a1dab3baa3e7ad220bc?o=7474647046080636
+Registered model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk' already exists. Creating a new version of this model...
+🔗 Created version '16' of model 'rtr_demo_catalog.readmission_worklist_gold.readmission_risk': https://fevm-classic-stable-v61z4f.cloud.databricks.com/explore/data/models/rtr_demo_catalog/readmission_worklist_gold/readmission_risk/version/16?o=7474647046080636
+
+
+🏃 View run readmission_risk_as_of_2026-11-01 at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083/runs/6a1d8827b58e4dab9933db4b3cee7671
+🧪 View experiment at: https://fevm-classic-stable-v61z4f.cloud.databricks.com/ml/experiments/96607588331083
+model rtr_demo_catalog.readmission_worklist_gold.readmission_risk v16 as_of=2026-11-01
+promoted=True champion=v16
+rows: {'train': 34287, 'validation': 8726, 'test': 8972}  windows: {'train': '2025-11-01..2026-06-01', 'validation': '2026-06-02..2026-08-01', 'test': '2026-08-02..2026-10-01'}
+test AUC=0.7453 Brier=0.11063 calibration slope=1.002 intercept=-0.050 observed=14.657% mean_predicted=15.262%
+champion v15 on same test: AUC=0.7445 Brier=0.11075
+gate: AUC 0.7453 vs champion 0.7445 (>= floor 0.7395)
+gate: Brier 0.11063 vs champion 0.11075 (no worse)
+decile | n | mean_predicted | observed_rate
+     1 |   898 | 0.042 | 0.043
+     2 |   898 | 0.053 | 0.049
+     3 |   897 | 0.063 | 0.062
+     4 |   897 | 0.073 | 0.064
+     5 |   897 | 0.087 | 0.093
+     6 |   897 | 0.110 | 0.090
+     7 |   897 | 0.148 | 0.147
+     8 |   897 | 0.214 | 0.202
+     9 |   897 | 0.309 | 0.295
+    10 |   897 | 0.428 | 0.420
+then-current champion for 2026-11-01: v16
+2026-11-01: scored=116 v16 worklist={'worklist_date': '2026-11-01', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+2026-11-02: scored=113 v16 worklist={'worklist_date': '2026-11-02', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-11-03: scored=158 v16 worklist={'worklist_date': '2026-11-03', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+2026-11-04: scored=175 v16 worklist={'worklist_date': '2026-11-04', 'items': 59, 'ASSIGNED': 50, 'OVERFLOW': 9, 'roster_capacity': 50}
+2026-11-05: scored=171 v16 worklist={'worklist_date': '2026-11-05', 'items': 49, 'ASSIGNED': 49, 'roster_capacity': 50}
+2026-11-06: scored=155 v16 worklist={'worklist_date': '2026-11-06', 'items': 39, 'ASSIGNED': 39, 'roster_capacity': 50}
+{'briefs_requested': 672, 'briefs_written': 638, 'brief_errors': 34, 'sample_errors': ['empty or truncated response', 'empty or truncated response', 'empty or truncated response']}

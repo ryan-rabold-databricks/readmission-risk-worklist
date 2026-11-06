@@ -1,0 +1,18 @@
+### select substr(appointment_id,1,0) x, count(*) appts, count_if(booked_ts > to_timestamp(concat(cast(date_add(to_date(e.discharge_ts),1) as string),' 12:00:00'))) booked_after_release, count_if(status='COMPLETED') completed from rtr_demo_catalog.clinical_silver.follow_up_appointment f join rtr_demo_catalog.clinical_silver.encounter e on e.encounter_id=f.source_encounter_id where e.discharge_ts >= '2026-05-01' group by 1
+SUCCEEDED 
+['x', 'appts', 'booked_after_release', 'completed']
+['', '25226', '1427', '18949']
+### select count(*) leaked_features from rtr_demo_catalog.readmission_worklist_gold.discharge_features d join rtr_demo_catalog.clinical_silver.follow_up_appointment f on f.source_encounter_id=d.encounter_id where d.followup_scheduled_7d and f.booked_ts > to_timestamp(concat(cast(date_add(d.discharge_date,1) as string),' 12:00:00')) and not exists (select 1 from rtr_demo_catalog.clinical_silver.follow_up_appointment g where g.source_encounter_id=d.encounter_id and g.booked_ts <= to_timestamp(concat(cast(date_add(d.discharge_date,1) as string),' 12:00:00')))
+SUCCEEDED 
+['leaked_features']
+['0']
+### select case when discharge_date < '2026-05-01' then 'pre_go_live' else 'post_go_live' end period, count(*) stays, round(avg(cast(readmit_30d as int))*100,2) readmit_pct, round(avg(cast(followup_within_7d as int))*100,2) followup7_attended_pct from rtr_demo_catalog.readmission_worklist_gold.discharge_features where readmit_30d is not null and discharge_date >= '2025-11-01' group by 1 order by 1
+SUCCEEDED 
+['period', 'stays', 'readmit_pct', 'followup7_attended_pct']
+['post_go_live', '23326', '14.35', '50.81']
+['pre_go_live', '29440', '16.11', '47.18']
+### select year(discharge_date) yr, count(*) stays, round(avg(cast(readmit_30d as int))*100,2) readmit_pct, round(avg(cast(followup_within_7d as int))*100,2) followup7_pct from rtr_demo_catalog.readmission_worklist_gold.discharge_features where readmit_30d is not null and month(discharge_date) between 5 and 9 group by 1 order by 1
+SUCCEEDED 
+['yr', 'stays', 'readmit_pct', 'followup7_pct']
+['2025', '22512', '14.98', '46.99']
+['2026', '22388', '14.33', '50.79']

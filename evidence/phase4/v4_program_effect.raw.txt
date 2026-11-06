@@ -1,0 +1,8 @@
+### with o as (select worklist_item_id, max(activity_type='REACHED') reached, max(activity_type='FOLLOWUP_BOOKED') booked from (select * from (select *, row_number() over (partition by activity_id order by _pg_lsn desc, _sort_by desc) rn from rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history) where rn=1 and _pg_change_type != 'delete') group by 1) select w.risk_tier, case when w.assignment_status='OVERFLOW' then 'overflow (not worked)' when coalesce(o.reached,false) then 'reached' else 'assigned, not reached' end grp, count(*) items, round(avg(cast(d.readmit_30d as int))*100,1) readmit_pct, round(avg(cast(d.followup_within_7d as int))*100,1) followup7_pct, round(avg(w.risk_score)*100,1) mean_predicted_pct from rtr_demo_catalog.readmission_worklist_gold.care_worklist w join rtr_demo_catalog.readmission_worklist_gold.discharge_features d using (encounter_id) left join o using (worklist_item_id) where d.readmit_30d is not null group by 1,2 order by 1,2
+SUCCEEDED 
+['risk_tier', 'grp', 'items', 'readmit_pct', 'followup7_pct', 'mean_predicted_pct']
+['HIGH', 'assigned, not reached', '1514', '39.1', '36.8', '39.3']
+['HIGH', 'reached', '2567', '34.6', '54.9', '39.4']
+['MEDIUM', 'assigned, not reached', '1269', '22.6', '45.1', '24.1']
+['MEDIUM', 'overflow (not worked)', '273', '17.9', '46.5', '20.0']
+['MEDIUM', 'reached', '1552', '18.5', '63.1', '24.0']

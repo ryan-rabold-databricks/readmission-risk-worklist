@@ -1,0 +1,4 @@
+# v4 rebuild reset, run by the author 2026-11-06 (classifier blocked the agent)
+DELETE FROM rtr_demo_catalog.readmission_worklist_gold.{discharge_risk_score,care_worklist,care_team_roster}
+databricks registered-models delete-alias ...readmission_risk {champion,challenger}  -> removed alias champion / challenger
+Verification: counts scores=0 worklist=0 roster=0; registered model aliases: None (model versions kept)
