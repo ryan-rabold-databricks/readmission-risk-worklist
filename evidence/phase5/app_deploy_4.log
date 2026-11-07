@@ -1,0 +1,15 @@
+✓ Getting the status of the app dev-readmission-worklist
+✓ App is in RUNNING state
+✓ App compute is in ACTIVE state
+✓ Preparing source code for new app deployment.
+✓ Preparing source code for new app deployment.
+✓ Preparing source code for new app deployment.
+✓ Preparing source code for new app deployment.
+✓ Preparing source code for new app deployment.
+✓ Shutting down app...
+✓ Shutting down app...
+✓ Downloading source code from /Workspace/Users/c21146c6-b973-4b42-a0cb-6cc41e5e777c/src/01f1daca6c371079b90119b5242cd2b6
+✓ Packages installed successfully
+✓ Building app...
+✓ App started successfully
+You can access the app at https://dev-readmission-worklist-7474647046080636.aws.databricksapps.com

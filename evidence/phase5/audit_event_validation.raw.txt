@@ -1,0 +1,29 @@
+### app_audit_event vs audit records in app_otel_logs
+silver_events	distinct_bronze_events	bronze_records
+7	7	7
+### Events
+event_ts	event_name	action	record_type	record_id	facility_id	user_email	has_trace
+2026-11-07T16:41:27.468Z	worklist.viewed	list	worklist_day	2026-11-06		ryan.rabold@databricks.com	true
+2026-11-07T16:42:00.443Z	worklist.viewed	list	worklist_day	2026-11-06		ryan.rabold@databricks.com	true
+2026-11-07T16:45:48.573Z	worklist.viewed	list	worklist_day	2026-11-06		ryan.rabold@databricks.com	true
+2026-11-07T16:45:53.661Z	worklist.viewed	open	worklist_item	0cf114b2f603950a884e642cf2e599eec338940aa1a954895b67b0fd382b55a0	FAC-CCH	ryan.rabold@databricks.com	true
+2026-11-07T16:46:36.779Z	outreach.logged	LEFT_VOICEMAIL	outreach_activity	948a90d5-5c3b-4999-b1c9-6954806b370c	FAC-CCH	ryan.rabold@databricks.com	true
+2026-11-07T16:46:36.836Z	worklist.viewed	list	worklist_day	2026-11-06		ryan.rabold@databricks.com	true
+2026-11-07T16:46:36.876Z	worklist.viewed	open	worklist_item	0cf114b2f603950a884e642cf2e599eec338940aa1a954895b67b0fd382b55a0	FAC-CCH	ryan.rabold@databricks.com	true
+### outreach.logged record_id joins to silver outreach_activity (after CDF)
+record_id	activity_type	care_manager_email
+948a90d5-5c3b-4999-b1c9-6954806b370c	LEFT_VOICEMAIL	ryan.rabold@databricks.com
+### PHI scan of app telemetry (phone pattern, SQL text, patient names from the worklist)
+hits
+0
+### Change made in the deployed app: pipeline result
+change_id	setting_type	effective_date	changed_by	status	status_reason
+4d2bdda6-7193-4ded-8e82-6abbba10bfce	CARE_MANAGER_CAPACITY	2026-11-09	ryan.rabold@databricks.com	APPLIED	
+### care_manager_capacity versions
+daily_capacity	effective_date	expiration_date	audit_created_process	audit_created_run_id
+50	2024-11-01	2026-11-08	dev_readmit_pipeline	seed:care_manager_capacity.csv
+50	2026-11-08	2026-11-09	readmission_worklist_app	ecccede8-0662-4d43-8c50-a83c6912eb7e
+50	2026-11-09		readmission_worklist_app	4d2bdda6-7193-4ded-8e82-6abbba10bfce
+### settings.changed audit event
+event_name	action	record_type	record_id	user_email
+settings.changed	CARE_MANAGER_CAPACITY	program_setting_change	4d2bdda6-7193-4ded-8e82-6abbba10bfce	ryan.rabold@databricks.com

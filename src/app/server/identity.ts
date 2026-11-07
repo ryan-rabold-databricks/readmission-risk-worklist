@@ -1,36 +1,50 @@
 // Who is signed in, and whether they belong to the leadership group.
 //
-// Databricks Apps sets x-forwarded-email on every request. Locally (npm run dev) there is
-// no proxy, so READMIT_DEV_USER_EMAIL stands in. Group membership is looked up with the
-// app's service principal (SCIM) and cached briefly so a removal takes effect within minutes.
+// Databricks Apps sets x-forwarded-email and (with user authorization) the user's
+// x-forwarded-access-token on every request. Group membership is read as the user from
+// SCIM /Me (scope iam.current-user:read): the app's service principal cannot see other
+// users' groups. Locally (npm run dev) there is no proxy: READMIT_DEV_USER_EMAIL stands in
+// for the email and the CLI profile answers /Me. Results are cached briefly so a group
+// removal takes effect within minutes.
 
 import type { Request } from 'express';
 import { createWorkspaceClient } from '@databricks/appkit';
+import { z } from 'zod';
 import { appConfig } from './config';
 
 const GROUP_CACHE_MS = 5 * 60 * 1000;
 const groupCache = new Map<string, { isLeader: boolean; at: number }>();
 
+const MeResponse = z.object({ groups: z.array(z.object({ display: z.string().optional() })).optional() });
+
 export class UnauthenticatedError extends Error {}
 
+const isDev = () => process.env.NODE_ENV === 'development';
+
 export function userEmail(req: Request): string {
-  const email = req.header('x-forwarded-email') ?? (process.env.NODE_ENV === 'development' ? process.env.READMIT_DEV_USER_EMAIL : undefined);
+  const email = req.header('x-forwarded-email') ?? (isDev() ? process.env.READMIT_DEV_USER_EMAIL : undefined);
   if (!email) throw new UnauthenticatedError('No signed-in user');
   return email.toLowerCase();
 }
 
-export async function isLeader(email: string): Promise<boolean> {
+async function groupsOfSignedInUser(req: Request): Promise<string[]> {
+  const token = req.header('x-forwarded-access-token');
+  if (token) {
+    const host = (process.env.DATABRICKS_HOST ?? '').replace(/^(?!https?:\/\/)/, 'https://').replace(/\/$/, '');
+    const res = await fetch(`${host}/api/2.0/preview/scim/v2/Me?attributes=groups`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(`SCIM /Me returned ${res.status}`);
+    return (MeResponse.parse(await res.json()).groups ?? []).map((g) => g.display ?? '');
+  }
+  if (!isDev()) throw new UnauthenticatedError('No user token');
+  const me = await createWorkspaceClient().currentUser.me();
+  return (me.groups ?? []).map((g) => g.display ?? '');
+}
+
+export async function isLeader(req: Request): Promise<boolean> {
+  const email = userEmail(req);
   const cached = groupCache.get(email);
   if (cached && Date.now() - cached.at < GROUP_CACHE_MS) return cached.isLeader;
-  const w = createWorkspaceClient().toLegacyWorkspaceClient();
-  let member = false;
-  // userName is unique, so the filter returns at most one user. Stop after it:
-  // @databricks/sdk-experimental 0.17.0's list() never advances startIndex and would
-  // yield the same page forever.
-  for await (const user of w.usersV2.list({ filter: `userName eq "${email.replace(/"/g, '')}"`, attributes: 'userName,groups' })) {
-    member = user.userName?.toLowerCase() === email && (user.groups ?? []).some((g) => g.display === appConfig.leadershipGroup);
-    break;
-  }
+  const member = (await groupsOfSignedInUser(req)).includes(appConfig.leadershipGroup);
   groupCache.set(email, { isLeader: member, at: Date.now() });
   return member;
 }

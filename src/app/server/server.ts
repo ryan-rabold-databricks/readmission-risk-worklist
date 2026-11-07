@@ -14,7 +14,7 @@ createApp({
         const email = userEmail(req);
         res.json({
           email,
-          isLeader: await isLeader(email),
+          isLeader: await isLeader(req),
           catalog: appConfig.catalog,
           env: appConfig.env,
           programGoLive: appConfig.programGoLive,

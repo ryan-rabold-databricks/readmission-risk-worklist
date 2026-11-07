@@ -13,7 +13,7 @@ import { handle } from './types';
 
 async function requireLeader(req: Request, res: Response): Promise<string | null> {
   const email = userEmail(req);
-  if (!(await isLeader(email))) {
+  if (!(await isLeader(req))) {
     res.status(403).json({ error: 'Program Settings is limited to care management leadership' });
     return null;
   }

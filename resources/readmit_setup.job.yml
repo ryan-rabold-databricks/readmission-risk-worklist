@@ -1,6 +1,6 @@
 # One-time, idempotent setup for what the bundle cannot declare: the app's Postgres
 # schema (REPLICA IDENTITY FULL), the Lakebase CDF feed into
-# readmission_worklist_app_bronze, and app grants. Genie Agent setup joins in Phase 6.
+# readmission_worklist_app_bronze, and app grants (Postgres, plus UC grants for app telemetry). Genie Agent setup joins in Phase 6.
 # Run after every `bundle deploy` that changes Lakebase resources; reruns are no-ops.
 
 resources:

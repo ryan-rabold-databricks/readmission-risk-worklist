@@ -270,7 +270,8 @@ function ItemSheet({ itemId, onClose, onLogged }: { itemId: string | null; onClo
                 <h3 className="text-sm font-semibold">Outreach brief</h3>
                 {item.outreach_brief ? (
                   <>
-                    <p className="text-sm whitespace-pre-line">{item.outreach_brief}</p>
+                    {/* The model drafts markdown bullets; show them as plain text without the bold markers. */}
+                    <p className="text-sm whitespace-pre-line">{item.outreach_brief.replace(/\*\*/g, '')}</p>
                     <p className="text-xs text-muted-foreground">AI-drafted from the risk drivers only (no chart access). Verify before acting.</p>
                   </>
                 ) : (

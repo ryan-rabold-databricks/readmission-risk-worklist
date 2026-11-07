@@ -2,7 +2,7 @@
 
 A reference solution on Databricks that helps a hospital care management team cut avoidable 30-day readmissions. Every morning it scores yesterday's discharges for readmission risk, routes high-risk patients to the right care manager with a plain-language outreach brief, captures each outreach call, and measures whether the program is actually moving readmission rates.
 
-> **Status:** Phase 4 of 7 complete (bundle, synthetic EHR source simulator, Lakeflow SDP pipeline, readmission model with champion/challenger gates, daily scoring and capacity-capped worklist with `ai_query` briefs, program history from 2026-05-01, Lakebase project with synced worklist tables, app schema, Lakebase CDF feed, simulated outreach history). The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
+> **Status:** Phase 5 of 7 complete (bundle, synthetic EHR source simulator, Lakeflow SDP pipeline, readmission model with champion/challenger gates, daily scoring and capacity-capped worklist with `ai_query` briefs, program history from 2026-05-01, Lakebase synced worklist and CDF write-back, simulated outreach history, AppKit app with Worklist / Program / Program Settings tabs, Program Settings applied by the pipeline, `readmission_outcome`, app telemetry and audit events). Genie, the metric view, and ABAC policies are Phase 6. The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
 >
 > All data is **synthetic**. No real patient or customer data is used anywhere in this repository.
 
@@ -118,7 +118,7 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | Foundation Model endpoint | Any pay-per-token chat model; set through the `llm_endpoint` bundle variable |
 | Permissions | CREATE CATALOG (or an existing catalog), permission to create Lakebase projects (the deployer gets CAN MANAGE), workspace admin for preview enablement |
 
-## Deploy and run *(steps 1-6 work today; 7 is planned)*
+## Deploy and run
 
 ```bash
 # 1. Authenticate
@@ -130,10 +130,17 @@ databricks auth login --profile <profile>
 databricks bundle validate -t dev --profile <profile>
 databricks bundle deploy   -t dev --profile <profile>
 
-# 3. Lakebase setup the bundle cannot declare: app schema (REPLICA IDENTITY FULL),
-#    Lakebase CDF feed, and (Phase 5, --params app_role=<sp>) app grants. Idempotent.
-#    Genie Agent setup joins in Phase 6.
+# 3. Lakebase setup the bundle cannot declare: app schema (REPLICA IDENTITY FULL) and the
+#    Lakebase CDF feed (creates the lb_*_history tables the pipeline reads). Idempotent.
 databricks bundle run readmit_setup -t dev --profile <profile>
+
+# 3a. App grants: deploying the bundle created the app and its service principal. Grant it
+#     Postgres access (synced schema SELECT, app schema SELECT/INSERT) and the UC grants
+#     app telemetry needs, then start the app (this also creates the app_otel_* tables
+#     the pipeline's app_audit_event reads).
+APP_SP=$(databricks apps get <env>-readmission-worklist --profile <profile> -o json | jq -r .service_principal_client_id)
+databricks bundle run readmit_setup -t dev --profile <profile> --params app_role=$APP_SP
+databricks bundle run readmission_worklist_app -t dev --profile <profile>
 
 # 4. Generate synthetic history and today's extract
 databricks bundle run readmit_source_simulator -t dev --profile <profile>
@@ -156,9 +163,11 @@ databricks bundle run readmit_outreach_simulator -t dev --profile <profile>
 # 6. Run the daily cycle (ingest, score, build the worklist, publish it to Lakebase)
 databricks bundle run readmit_daily_cycle -t dev --profile <profile>
 
-# 7. Deploy the app
+# 7. Redeploy the app after app code changes
 databricks bundle run readmission_worklist_app -t dev --profile <profile>
 ```
+
+Program Settings is limited to the workspace group `care_mgmt_leadership`; add leaders to it (`databricks groups create --json '{"displayName": "care_mgmt_leadership"}'` in a new workspace). Care managers see the worklist for the facilities they are rostered at, which leadership sets in Program Settings.
 
 ## Repository structure
 
@@ -178,7 +187,8 @@ readmission-risk-worklist/
 │   ├── readmission_worklist.postgres_project.yml     # Lakebase project
 │   ├── readmission_worklist_db.postgres_database.yml # Lakebase database readmission_worklist
 │   ├── *_synced.postgres_synced_table.yml  # care_worklist_synced, care_team_roster_synced
-│   ├── readmit_setup.job.yml               # app schema, CDF feed, grants (idempotent)
+│   ├── readmit_setup.job.yml               # app schema, CDF feed, app grants (idempotent)
+│   ├── readmission_worklist_app.app.yml    # <env>-readmission-worklist: resources, user scopes, telemetry
 │   ├── readmit_outreach_simulator.job.yml  # demo only: outreach history through Lakebase
 │   ├── readmission_risk.registered_model.yml
 │   └── readmission_risk_experiment.experiment.yml
@@ -191,7 +201,11 @@ readmission-risk-worklist/
 │   │   ├── lakebase/           # Connection, app schema DDL, CDF feed, setup, publish, outreach simulator
 │   │   └── simulator/          # Synthetic EHR extract generator (entry point: simulate)
 │   ├── pipeline/transformations/  # Lakeflow SDP sources, one file per dataset or entity
-│   └── app/                    # (planned) Databricks App, AppKit
+│   └── app/                    # Databricks App (AppKit, Node/TypeScript/React)
+│       ├── server/             # Express routes (worklist, settings), identity, audit events, settings validation
+│       ├── client/src/pages/   # WorklistPage, ProgramPage, SettingsPage
+│       ├── config/queries/     # *.obo.sql warehouse queries (run as the signed-in user)
+│       └── shared/appkit-types/  # Generated query types (npm run typegen), committed
 ├── seeds/                      # facility, risk_tier_policy, care_team_assignment, care_manager_capacity
 ├── tests/                      # Local unit tests (pytest)
 ├── evidence/                   # Committed run output: job logs, query results
@@ -208,8 +222,10 @@ readmission-risk-worklist/
 | Bronze | `ehr_bronze.{patient,encounter,diagnosis,appointment}_raw` | Auto Loader (JSON lines, explicit schema, `_rescued_data`), append-only with source file and ingest time |
 | Quarantine | `ehr_bronze.quarantine_raw` | Rows failing any data-quality rule, with the failed rule names and the original record as JSON |
 | Silver | `clinical_silver.{patient,encounter,diagnosis,follow_up_appointment}` | AUTO CDC SCD Type 1 on valid rows, sequenced by `record_updated_ts`; SHA-256 surrogate keys of the natural keys |
-| Reference | `clinical_silver.facility`, `care_management_silver.{risk_tier_policy,care_team_assignment}` | Materialized views over `seeds/*.csv` |
-| Gold | `readmission_worklist_gold.discharge_features` | Materialized view: LACE-style features known at scoring time, `followup_within_7d` outcome, `readmit_30d` label with `label_matured_at` |
+| Reference | `clinical_silver.facility`, `care_management_silver.{risk_tier_policy,care_team_assignment,care_manager_capacity}` | Materialized views: `seeds/*.csv` plus Program Settings changes the pipeline applied, effective-dated |
+| App (Lakebase CDF, telemetry) | `care_management_silver.{outreach_activity,program_setting,app_audit_event}` | AUTO CDC from `readmission_worklist_app_bronze`: outreach (deletes applied, UUIDs as strings), every settings change with APPLIED / SUPERSEDED / REJECTED, audit events de-duplicated on `event_id` |
+| Gold | `readmission_worklist_gold.discharge_features` | Materialized view: LACE-style features known at scoring time, `followup_within_7d` outcome, `readmit_30d` label with `label_matured_at` and `readmit_encounter_id` |
+| Gold | `readmission_worklist_gold.readmission_outcome` | Materialized view, one row per discharge: tier, on worklist, reached, time to first contact, 7-day follow-up, 30-day outcome |
 
 - **One rule set, two uses:** the rules in `readmit.pipeline.quality_rules` run as warn-only expectations on bronze (pass/fail counts in the event log) and route failing rows to quarantine, so the two cannot disagree.
 - **No leakage:** model inputs use only what is known the morning after discharge. A booked follow-up (`followup_scheduled_7d`) is an input; attendance (`followup_within_7d`) is an outcome only.
@@ -217,7 +233,7 @@ readmission-risk-worklist/
 - **Audit columns** on every silver and gold table: see `readmit.pipeline.audit` and `docs/DECISIONS.md` #22.
 - Run evidence: [`evidence/phase2/`](evidence/phase2/).
 
-Outreach, program settings, and app audit tables (`care_management_silver.outreach_activity`, `program_setting`, `app_audit_event`) and `readmission_outcome` are added in Phases 3-5, when their sources exist.
+Run order on a fresh environment: `readmit_setup` (creates the CDF history tables) and a first app start (creates `app_otel_logs`) come before the first pipeline run.
 
 ## Readmission model and worklist
 
@@ -230,7 +246,7 @@ Outreach, program settings, and app audit tables (`care_management_silver.outrea
 | `care_team_roster` | Care managers who can act on each facility's worklist each day, with their daily capacity |
 | Outreach brief | `ai_query` on `${var.llm_endpoint}` with the minimum necessary facts (no name, MRN, or phone), drafted once per item for the latest `brief_days` worklist days. Pay-per-token Foundation Model APIs are HIPAA compliant across all regions ([docs](https://docs.databricks.com/aws/en/machine-learning/foundation-model-apis/compliance)); see DECISIONS.md #38 for the Compliance Security Profile and cross-Geo caveats |
 
-Promotion gates (job parameters): first model AUC >= 0.68 and calibration slope 0.8-1.2; later challengers AUC >= champion - 0.005 and Brier no worse on the same test window. Capacity is per care manager per day (`seeds/care_manager_capacity.csv`; Program Settings in Phase 5). Run evidence: [`evidence/phase3/`](evidence/phase3/).
+Promotion gates (job parameters): first model AUC >= 0.68 and calibration slope 0.8-1.2; later challengers AUC >= champion - 0.005 and Brier no worse on the same test window. Capacity is per care manager per day (`seeds/care_manager_capacity.csv`, changed in Program Settings). Run evidence: [`evidence/phase3/`](evidence/phase3/).
 
 ## Lakebase serving and write-back
 
@@ -244,6 +260,23 @@ Promotion gates (job parameters): first model AUC >= 0.68 and calibration slope 
 | `<env>_readmit_outreach_simulator` (demo only) | Deterministic outreach history for past worklist days (about 60% reach rate), written through Lakebase like the app; reconciles its own rows after a rebuild. The EHR simulator (generator v4) reads the REACHED calls back through CDF, so reached patients get care-manager follow-ups and readmit less |
 
 Run evidence: [`evidence/phase4/`](evidence/phase4/). Decisions #40-#49.
+
+## Readmission worklist app
+
+`<env>-readmission-worklist` (AppKit 0.76.1). Every action is scoped to the signed-in user.
+
+| Tab | Who | Reads | Writes |
+|---|---|---|---|
+| Worklist | Care manager | Lakebase `care_worklist_synced` joined to `care_team_roster_synced` for the user and day; status from `outreach_activity` | `readmission_worklist_app.outreach_activity` (idempotent on `client_request_id`) |
+| Program | Leadership / Quality | `readmission_outcome` through the warehouse, on behalf of the user: readmission rate vs prior year, reach rate, 7-day follow-up, estimated cost avoided, monthly trend, facility and tier tables | - |
+| Program Settings | `care_mgmt_leadership` | Settings in effect (UC, on behalf of the user); change log (Lakebase) with the pipeline's result | `readmission_worklist_app.program_setting_change`: risk tier cut-offs and SLAs, care manager facilities and capacity, with effective date and reason |
+
+- **Two identities:** Lakebase access uses the app's service principal (append-only grants) with every worklist query filtered to the user's roster; warehouse queries are `*.obo.sql` and run as the user (`user_api_scopes: [sql]`), so the service principal has no Unity Catalog data grants.
+- **Settings take effect on the next daily cycle:** the pipeline re-validates each change (the app checks the same rules first) and applies it from its effective date. No retroactive changes; released worklists are never rebuilt.
+- **Audit:** `worklist.viewed`, `outreach.logged`, `settings.changed` are OpenTelemetry log records (IDs only) exported by Databricks Apps telemetry to `readmission_worklist_app_bronze.app_otel_logs` and curated into `care_management_silver.app_audit_event`. `genie.asked` comes with Genie in Phase 6.
+- **Local development:** `cd src/app && npm install && npm run dev` with a `.env` from `.env.example` (`READMIT_DEV_USER_EMAIL` stands in for the signed-in user). Run `npm run typegen` after changing a query; the generated types are committed because the deployed build does not regenerate them.
+
+Run evidence: [`evidence/phase5/`](evidence/phase5/). Decisions #50-#57.
 
 ## Synthetic EHR source simulator
 

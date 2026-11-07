@@ -1,0 +1,45 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/159512900865467/runs/1059769072167077?o=7474647046080636
+
+2026-11-06 17:54:59 "dev_readmit_setup" RUNNING
+2026-11-06 17:55:38 "dev_readmit_setup" TERMINATED SUCCESS
+{
+  "database": "projects/readmission-worklist/branches/production/databases/readmission-worklist",
+  "replica_identity": {
+    "outreach_activity": "full",
+    "program_setting_change": "full"
+  },
+  "grants": [
+    "GRANT USAGE ON SCHEMA readmission_worklist_gold TO \"c21146c6-b973-4b42-a0cb-6cc41e5e777c\"",
+    "GRANT SELECT ON ALL TABLES IN SCHEMA readmission_worklist_gold TO \"c21146c6-b973-4b42-a0cb-6cc41e5e777c\"",
+    "GRANT USAGE ON SCHEMA readmission_worklist_app TO \"c21146c6-b973-4b42-a0cb-6cc41e5e777c\"",
+    "GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA readmission_worklist_app TO \"c21146c6-b973-4b42-a0cb-6cc41e5e777c\"",
+    "ALTER DEFAULT PRIVILEGES IN SCHEMA readmission_worklist_app GRANT SELECT, INSERT ON TABLES TO \"c21146c6-b973-4b42-a0cb-6cc41e5e777c\""
+  ],
+  "telemetry_grants": [
+    "USE_SCHEMA ON SCHEMA rtr_demo_catalog.readmission_worklist_app_bronze TO c21146c6-b973-4b42-a0cb-6cc41e5e777c",
+    "CREATE_TABLE ON SCHEMA rtr_demo_catalog.readmission_worklist_app_bronze TO c21146c6-b973-4b42-a0cb-6cc41e5e777c",
+    "SELECT ON SCHEMA rtr_demo_catalog.readmission_worklist_app_bronze TO c21146c6-b973-4b42-a0cb-6cc41e5e777c",
+    "MODIFY ON SCHEMA rtr_demo_catalog.readmission_worklist_app_bronze TO c21146c6-b973-4b42-a0cb-6cc41e5e777c"
+  ],
+  "cdf_config": {
+    "name": "projects/readmission-worklist/branches/production/databases/readmission-worklist/cdf-configs/readmission_worklist_app",
+    "postgres_schema": "readmission_worklist_app",
+    "destination": "rtr_demo_catalog.readmission_worklist_app_bronze"
+  },
+  "cdf_statuses": [
+    {
+      "postgres_table": "outreach_activity",
+      "uc_table": "rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history",
+      "state": "CDF_STATE_STREAMING",
+      "last_sync_time": "seconds: 1794005209\nnanos: 96251000\n",
+      "detail": null
+    },
+    {
+      "postgres_table": "program_setting_change",
+      "uc_table": "rtr_demo_catalog.readmission_worklist_app_bronze.lb_program_setting_change_history",
+      "state": "CDF_STATE_STREAMING",
+      "last_sync_time": "seconds: 1794003842\nnanos: 205974000\n",
+      "detail": null
+    }
+  ]
+}
