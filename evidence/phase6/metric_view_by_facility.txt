@@ -1,0 +1,51 @@
+StatementState.SUCCEEDED 
+{
+ "facility_name": "Cedar Creek Community Hospital",
+ "d_prog": "0.0",
+ "d_base": "0.0",
+ "d_fu": "0.0",
+ "reach_app_old": "0.6385",
+ "reach_mv": "0.6415",
+ "avoided": "23.2",
+ "cost": "348158.0"
+}
+{
+ "facility_name": "Lakeside Medical Center",
+ "d_prog": "0.0",
+ "d_base": "0.0",
+ "d_fu": "0.0",
+ "reach_app_old": "0.6495",
+ "reach_mv": "0.6531",
+ "avoided": "80.6",
+ "cost": "1209255.0"
+}
+{
+ "facility_name": "Northgate Regional Hospital",
+ "d_prog": "0.0",
+ "d_base": "0.0",
+ "d_fu": "0.0",
+ "reach_app_old": "0.6306",
+ "reach_mv": "0.6334",
+ "avoided": "27.4",
+ "cost": "410457.0"
+}
+{
+ "facility_name": "Riverbend Community Hospital",
+ "d_prog": "0.0",
+ "d_base": "0.0",
+ "d_fu": "0.0",
+ "reach_app_old": "0.6238",
+ "reach_mv": "0.6265",
+ "avoided": "8.1",
+ "cost": "122095.0"
+}
+{
+ "facility_name": "Southview Hospital",
+ "d_prog": "0.0",
+ "d_base": "0.0",
+ "d_fu": "0.0",
+ "reach_app_old": "0.6457",
+ "reach_mv": "0.6484",
+ "avoided": "36.4",
+ "cost": "545793.0"
+}

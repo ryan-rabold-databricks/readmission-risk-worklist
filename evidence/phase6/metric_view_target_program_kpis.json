@@ -1,0 +1,22 @@
+[
+  {
+    "baseline_followup_7d_rate": "0.46915515634268284",
+    "baseline_readmit_rate": "0.14986018134056436",
+    "data_through": "2026-11-05",
+    "est_cost_avoided": "2641204.4427080425",
+    "est_cost_avoided_yoy": "2201449.2415896957",
+    "latest_worklist_date": "2026-11-06",
+    "matured_program_discharges": "23507",
+    "matured_through": "2026-10-06",
+    "median_first_contact_hours": "22.18",
+    "overflow_items": "358",
+    "program_discharges": "28094",
+    "program_followup_7d_rate": "0.5081890500701919",
+    "program_readmit_rate": "0.14361679499723487",
+    "program_start": "2026-04-30",
+    "reach_rate": "0.6432124226616523",
+    "readmissions_avoided": "176.08029618053615",
+    "readmissions_avoided_yoy": "146.7632827726464",
+    "worklist_items": "8640"
+  }
+]

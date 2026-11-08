@@ -1,0 +1,6 @@
+StatementState.SUCCEEDED 
+{
+ "app_months": "23",
+ "mv_months": "23",
+ "max_rate_diff": "0.0"
+}

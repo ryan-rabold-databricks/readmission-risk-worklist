@@ -1,0 +1,38 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/773178160265376/runs/330625565643081?o=7474647046080636
+
+2026-11-08 10:53:10 "dev_readmit_daily_cycle" RUNNING
+2026-11-08 10:55:06 "dev_readmit_daily_cycle" TERMINATED SUCCESS
+{
+  "run_date": "2026-11-06",
+  "tables": {
+    "care_worklist_synced": {
+      "pipeline_id": "79bc3344-3bf2-41d7-85c0-9b6215af1a2e",
+      "update_id": "16545a61-6eb1-4287-85cf-8f6640747e6a",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 1465,
+        "day": 39
+      },
+      "pg_rows": {
+        "total": 1465,
+        "day": 39
+      }
+    },
+    "care_team_roster_synced": {
+      "pipeline_id": "2051653d-2e68-439e-95ae-74fcd727038d",
+      "update_id": "7013b2c1-fc0d-410a-8a81-f1ca4f338ca5",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 150,
+        "day": 5
+      },
+      "pg_rows": {
+        "total": 150,
+        "day": 5
+      }
+    }
+  }
+}
+exit=0
+(project: 'str', branch: 'str', database: 'str') -> None
+postgres care_worklist_synced (rows, redacted, distinct names): (1465, 0, 1230)

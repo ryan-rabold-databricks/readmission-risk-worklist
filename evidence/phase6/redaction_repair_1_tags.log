@@ -1,0 +1,8 @@
+delete class.name on rtr_demo_catalog.clinical_silver.patient.first_name
+ok
+delete class.name on rtr_demo_catalog.clinical_silver.patient.last_name
+ok
+delete class.name on rtr_demo_catalog.ehr_bronze.patient_raw.first_name
+ok
+delete class.name on rtr_demo_catalog.ehr_bronze.patient_raw.last_name
+ok

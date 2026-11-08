@@ -1,0 +1,167 @@
+# readmission_worklist_gold.readmission_program_metrics: the one definition of the
+# Program tab KPIs (DECISIONS.md #57-#59, #61), for Genie and the app.
+# Rendered by readmit.governance.metric_view: __CATALOG__, __GO_LIVE__, __AVG_COST__ come
+# from the bundle variables catalog, program_go_live, avg_readmission_cost.
+#
+# Period bounds are computed once over the whole table in the source (fixed level of
+# detail), exactly as the app computes them before slicing:
+#   program  = discharges from go-live - 1 day (worklist day W covers discharges on W - 1)
+#   baseline = the same span one year earlier, ending one year before matured_through
+# Readmission rates use matured labels only (AVG ignores NULL readmitted_30d).
+version: 1.1
+comment: >-
+  Readmission prevention program KPIs, one row per inpatient discharge
+  (readmission_outcome). Program period starts at go-live (__GO_LIVE__) minus one day;
+  baseline is the same span one year earlier. Readmissions and cost avoided are
+  estimates, not causal measures. Cost uses an assumed $__AVG_COST__ per readmission
+  (rough estimate from AHRQ HCUP Statistical Brief #248; replace with your own figure).
+source: |
+  SELECT o.*, f.facility_name, b.program_start, b.matured_through, b.latest_worklist_date,
+    CASE WHEN o.discharge_date >= b.program_start THEN 'program'
+         WHEN o.discharge_date >= add_months(b.program_start, -12)
+          AND o.discharge_date <= add_months(b.matured_through, -12) THEN 'baseline'
+    END AS period,
+    bool_and(o.readmitted_30d IS NOT NULL)
+      OVER (PARTITION BY date_trunc('MONTH', o.discharge_date)) AS month_fully_matured
+  FROM __CATALOG__.readmission_worklist_gold.readmission_outcome o
+  CROSS JOIN (
+    SELECT date_sub(DATE'__GO_LIVE__', 1) AS program_start,
+           max(CASE WHEN readmitted_30d IS NOT NULL THEN discharge_date END) AS matured_through,
+           max(worklist_date) AS latest_worklist_date
+    FROM __CATALOG__.readmission_worklist_gold.readmission_outcome
+  ) b
+  LEFT JOIN __CATALOG__.clinical_silver.facility f ON f.facility_id = o.facility_id
+
+dimensions:
+  - name: period
+    expr: period
+    comment: "'program' (from go-live - 1 day), 'baseline' (same span one year earlier), or NULL (neither)."
+    synonyms: [program period, comparison period]
+  - name: discharge_date
+    expr: discharge_date
+  - name: discharge_month
+    expr: "date_trunc('MONTH', discharge_date)"
+    synonyms: [month]
+  - name: month_fully_matured
+    expr: month_fully_matured
+    comment: "True when every discharge in the month has a matured 30-day label. Trend charts show only these months."
+  - name: facility_id
+    expr: facility_id
+  - name: facility_name
+    expr: facility_name
+    synonyms: [hospital, facility]
+  - name: risk_tier
+    expr: risk_tier
+    comment: "Model risk tier on the worklist day: HIGH, MEDIUM, or LOW (LOW is not put on the worklist)."
+  - name: primary_condition_group
+    expr: primary_condition_group
+    synonyms: [condition, diagnosis group]
+  - name: assignment_status
+    expr: assignment_status
+    comment: "ASSIGNED (routed to a care manager) or OVERFLOW (over capacity, not worked); NULL if not on a worklist."
+  - name: outreach_group
+    expr: |
+      CASE WHEN NOT was_on_worklist THEN 'Not on worklist'
+           WHEN assignment_status = 'OVERFLOW' THEN 'Overflow (not worked)'
+           WHEN was_reached THEN 'Reached'
+           ELSE 'Assigned, not reached' END
+  - name: outcome_status
+    expr: outcome_status
+    comment: "PENDING (30-day window still open), READMITTED, or NOT_READMITTED."
+
+measures:
+  # Period bounds, for display next to any answer.
+  - name: program_start
+    expr: MIN(program_start)
+  - name: matured_through
+    expr: MIN(matured_through)
+    comment: Latest discharge date whose 30-day readmission label has matured.
+  - name: latest_worklist_date
+    expr: MIN(latest_worklist_date)
+
+  # Volumes.
+  - name: discharges
+    expr: COUNT(1)
+  - name: matured_discharges
+    expr: COUNT(readmitted_30d)
+  - name: readmissions
+    expr: SUM(CAST(readmitted_30d AS INT))
+  - name: program_discharges
+    expr: COUNT(1) FILTER (WHERE period = 'program')
+  - name: matured_program_discharges
+    expr: COUNT(readmitted_30d) FILTER (WHERE period = 'program')
+  - name: worklist_items
+    expr: COUNT(1) FILTER (WHERE was_on_worklist)
+  - name: overflow_items
+    expr: COUNT(1) FILTER (WHERE assignment_status = 'OVERFLOW')
+
+  # Rates for any slice (group by period, month, facility, tier, ...).
+  - name: readmission_rate
+    expr: AVG(CAST(readmitted_30d AS INT))
+    comment: 30-day readmission rate on matured labels only.
+    synonyms: [readmit rate]
+    format: {type: percentage}
+  - name: followup_7d_rate
+    expr: AVG(CAST(followup_completed_7d AS INT)) FILTER (WHERE discharge_date <= matured_through)
+    comment: Share of discharges with a follow-up visit attended within 7 days; through matured_through so both periods cover closed windows.
+    synonyms: [7-day follow-up rate]
+    format: {type: percentage}
+  - name: reach_rate
+    expr: AVG(CAST(was_reached AS INT)) FILTER (WHERE assignment_status = 'ASSIGNED' AND worklist_date < latest_worklist_date)
+    comment: Share of ASSIGNED worklist items whose patient was spoken to (REACHED, FOLLOWUP_BOOKED, DECLINED); excludes the latest worklist day, which is still being worked.
+    format: {type: percentage}
+  - name: median_first_contact_hours
+    expr: PERCENTILE_APPROX(first_contact_hours, 0.5) FILTER (WHERE was_reached)
+    comment: Median hours from worklist release to first contact, reached items only.
+
+  # Headline comparisons: program vs baseline.
+  - name: program_readmission_rate
+    expr: AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program')
+    format: {type: percentage}
+  - name: baseline_readmission_rate
+    expr: AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'baseline')
+    format: {type: percentage}
+  - name: program_followup_7d_rate
+    expr: AVG(CAST(followup_completed_7d AS INT)) FILTER (WHERE period = 'program' AND discharge_date <= matured_through)
+    format: {type: percentage}
+  - name: baseline_followup_7d_rate
+    expr: AVG(CAST(followup_completed_7d AS INT)) FILTER (WHERE period = 'baseline')
+    format: {type: percentage}
+
+  # Estimated readmissions avoided, method 1 (headline): within risk tier. Per tier,
+  # (not-reached rate - reached rate, floored at 0) x reached items, over matured ASSIGNED
+  # program items, summed over the three fixed tier names. Recomputed within any slice.
+  - name: readmissions_avoided
+    expr: |
+      greatest(
+        AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'HIGH' AND NOT was_reached)
+        - AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'HIGH' AND was_reached), 0)
+        * COUNT(readmitted_30d) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'HIGH' AND was_reached)
+      + greatest(
+        AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'MEDIUM' AND NOT was_reached)
+        - AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'MEDIUM' AND was_reached), 0)
+        * COUNT(readmitted_30d) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'MEDIUM' AND was_reached)
+      + greatest(
+        AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'LOW' AND NOT was_reached)
+        - AVG(CAST(readmitted_30d AS INT)) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'LOW' AND was_reached), 0)
+        * COUNT(readmitted_30d) FILTER (WHERE period = 'program' AND assignment_status = 'ASSIGNED' AND risk_tier = 'LOW' AND was_reached)
+    comment: >-
+      Estimate (headline): per risk tier, readmission rate of assigned-but-not-reached minus
+      reached items (floored at 0) times reached items, matured program items only. Reached
+      patients may differ in ways the model does not see; not a causal measure.
+  - name: est_cost_avoided
+    expr: MEASURE(readmissions_avoided) * __AVG_COST__
+    comment: Estimated cost avoided (headline, within-tier method) at the assumed cost per readmission.
+    synonyms: [cost avoided, savings]
+    format: {type: currency, currency_code: USD}
+
+  # Method 2 (cross-check): vs prior year, (baseline rate - program rate, floored at 0)
+  # x matured program discharges. Covers every discharge, but credits the program with
+  # anything else that changed year over year.
+  - name: readmissions_avoided_vs_prior_year
+    expr: greatest(MEASURE(baseline_readmission_rate) - MEASURE(program_readmission_rate), 0) * MEASURE(matured_program_discharges)
+    comment: Estimate (cross-check) from the year-over-year change in readmission rate.
+  - name: est_cost_avoided_vs_prior_year
+    expr: MEASURE(readmissions_avoided_vs_prior_year) * __AVG_COST__
+    comment: Estimated cost avoided (cross-check, prior-year method) at the assumed cost per readmission.
+    format: {type: currency, currency_code: USD}

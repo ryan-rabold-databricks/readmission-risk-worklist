@@ -1,0 +1,20 @@
+StatementState.SUCCEEDED 
+{
+ "program_start": "2026-04-30",
+ "matured_through": "2026-10-06",
+ "latest_worklist_date": "2026-11-06",
+ "program_discharges": "28094",
+ "program_readmit_rate": "0.14361679499723487",
+ "baseline_readmit_rate": "0.14986018134056436",
+ "program_followup_7d_rate": "0.5081890500701919",
+ "baseline_followup_7d_rate": "0.46915515634268284",
+ "reach_rate": "0.6432124226616523",
+ "worklist_items": "8640",
+ "overflow_items": "358",
+ "median_first_contact_hours": "22.18",
+ "readmissions_avoided": "176.08029618053615",
+ "est_cost_avoided": "2641204.4427080425",
+ "matured_program_discharges": "23507",
+ "readmissions_avoided_yoy": "146.7632827726464",
+ "est_cost_avoided_yoy": "2201449.2415896957"
+}
