@@ -90,7 +90,8 @@ export function ProgramPage({ me }: { me: Me }) {
               value={usd(k.est_cost_avoided)}
               detail={
                 <>
-                  {k.readmissions_avoided.toFixed(0)} readmissions avoided x {usd(me.avgReadmissionCost)} assumed cost per readmission: reached vs
+                  {k.readmissions_avoided.toFixed(0)} readmissions avoided x {usd(me.avgReadmissionCost)} per readmission (rough estimate based on AHRQ HCUP
+                  SB #248, $14,400 in 2016; replace with your own cost). Reached vs
                   not-reached readmission rate within each risk tier, on matured assigned items. Cross-check against the prior year (all{' '}
                   {k.matured_program_discharges.toLocaleString()} matured program discharges): {k.readmissions_avoided_yoy.toFixed(0)} avoided,{' '}
                   {usd(k.est_cost_avoided_yoy)}. Estimates, not causal measures.

@@ -60,7 +60,9 @@ SELECT
   (SELECT count(*) FROM program) AS program_discharges,
   (SELECT avg(cast(readmitted_30d AS INT)) FROM program WHERE readmitted_30d IS NOT NULL) AS program_readmit_rate,
   (SELECT avg(cast(readmitted_30d AS INT)) FROM baseline WHERE readmitted_30d IS NOT NULL) AS baseline_readmit_rate,
-  (SELECT avg(cast(followup_completed_7d AS INT)) FROM program) AS program_followup_7d_rate,
+  -- Same span as the baseline (through matured_through), so both sides only count
+  -- discharges whose 7-day follow-up window has closed.
+  (SELECT avg(cast(followup_completed_7d AS INT)) FROM program WHERE discharge_date <= b.matured_through) AS program_followup_7d_rate,
   (SELECT avg(cast(followup_completed_7d AS INT)) FROM baseline) AS baseline_followup_7d_rate,
   (SELECT avg(cast(was_reached AS INT)) FROM program
      WHERE assignment_status = 'ASSIGNED' AND worklist_date < b.latest_worklist_date) AS reach_rate,

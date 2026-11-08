@@ -61,7 +61,10 @@ variables:
     description: Outreach briefs (ai_query) are drafted for the most recent N worklist days only.
     default: "14"
   avg_readmission_cost:
-    description: Average cost of one readmission, used for estimated cost avoided.
+    # Rough estimate based on AHRQ HCUP Statistical Brief #248: average 30-day all-cause
+    # readmission cost $14,400 in 2016 (hospital cost, all payers). Each customer should
+    # set their own cost per readmission when deploying (DECISIONS.md #59).
+    description: Assumed cost of one readmission (USD) for estimated cost avoided. Rough estimate from HCUP SB #248; set the customer's own figure per target.
     default: "15000"
   warehouse_max_clusters:
     description: Upper bound for warehouse scale-out (1 for single-developer dev; raise for concurrent demo or prod use).

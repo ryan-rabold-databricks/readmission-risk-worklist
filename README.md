@@ -324,7 +324,7 @@ Bundle variables in `databricks.yml`:
 | `warehouse_max_clusters` | Scale-out limit for `<env>_readmit_wh` (bundle-managed) | `1` (dev), `2` (prod) |
 | `program_go_live` | First worklist day of the program; backfill start | `2026-05-01` |
 | `brief_days` | Outreach briefs are drafted for the latest N worklist days | `14` |
-| `avg_readmission_cost` | Cost assumption used by the metric view for cost avoided | `15000` |
+| `avg_readmission_cost` | Assumed cost of one readmission (USD) for estimated cost avoided. The default is a rough estimate based on [AHRQ HCUP Statistical Brief #248](https://hcup-us.ahrq.gov/reports/statbriefs/sb248-Hospital-Readmissions-2010-2016.jsp) ($14,400 average 30-day readmission cost in 2016, hospital cost, all payers); **set the customer's own cost when deploying** | `15000` |
 | `service_principal_id` | Service principal that runs prod workloads (`run_as`) | application ID |
 
 Simulator job parameters: `history_start` (default `2024-11-01`) and `run_date` (empty means yesterday, UTC).
