@@ -2,8 +2,13 @@
 -- covers discharges on W - 1). Baseline: the same calendar span one year earlier.
 -- Readmission rates use matured labels only; reach rate uses ASSIGNED worklist items
 -- released before the latest worklist day (today's items are still being worked).
--- Estimated readmissions avoided: per risk tier, (not-reached rate - reached rate) x reached
--- items, over matured ASSIGNED items; a within-tier comparison, not a causal estimate.
+-- Estimated readmissions avoided, two methods (DECISIONS.md #57):
+-- - within tier: per risk tier, (not-reached rate - reached rate) x reached items, over
+--   matured ASSIGNED items; specific to outreach, but reached patients may differ in ways
+--   the model does not see.
+-- - vs prior year: (baseline rate - program rate) x matured program discharges; covers
+--   every discharge, but credits the program with anything else that changed.
+-- Both floored at 0 and priced at avg_cost. Estimates, not causal measures.
 -- @param catalog STRING = rtr_demo_catalog
 -- @param go_live DATE = 2026-05-01
 -- @param avg_cost DOUBLE
@@ -38,6 +43,14 @@ tier_effect AS (
 avoided AS (
   SELECT coalesce(sum(greatest(not_reached_rate - reached_rate, 0) * reached_n), 0) AS readmissions_avoided
   FROM tier_effect
+),
+year_over_year AS (
+  SELECT
+    (SELECT count(*) FROM program WHERE readmitted_30d IS NOT NULL) AS matured_program_discharges,
+    greatest(
+      (SELECT avg(cast(readmitted_30d AS INT)) FROM baseline WHERE readmitted_30d IS NOT NULL)
+      - (SELECT avg(cast(readmitted_30d AS INT)) FROM program WHERE readmitted_30d IS NOT NULL),
+      0) * (SELECT count(*) FROM program WHERE readmitted_30d IS NOT NULL) AS readmissions_avoided_yoy
 )
 SELECT
   b.program_start,
@@ -55,5 +68,8 @@ SELECT
   (SELECT count(*) FROM program WHERE assignment_status = 'OVERFLOW') AS overflow_items,
   (SELECT percentile_approx(first_contact_hours, 0.5) FROM program WHERE was_reached) AS median_first_contact_hours,
   a.readmissions_avoided,
-  a.readmissions_avoided * :avg_cost AS est_cost_avoided
-FROM bounds b CROSS JOIN avoided a
+  a.readmissions_avoided * :avg_cost AS est_cost_avoided,
+  y.matured_program_discharges,
+  y.readmissions_avoided_yoy,
+  y.readmissions_avoided_yoy * :avg_cost AS est_cost_avoided_yoy
+FROM bounds b CROSS JOIN avoided a CROSS JOIN year_over_year y

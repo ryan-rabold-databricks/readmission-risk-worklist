@@ -30,6 +30,9 @@ export const ProgramKpis = z.object({
   median_first_contact_hours: num,
   readmissions_avoided: reqNum,
   est_cost_avoided: reqNum,
+  matured_program_discharges: reqNum,
+  readmissions_avoided_yoy: reqNum,
+  est_cost_avoided_yoy: reqNum,
 });
 
 export const FacilityRow = z.object({

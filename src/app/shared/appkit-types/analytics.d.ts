@@ -109,6 +109,12 @@ declare module "@databricks/appkit-ui/react" {
           readmissions_avoided: number;
           /** @sqlType DOUBLE */
           est_cost_avoided: number;
+          /** @sqlType BIGINT */
+          matured_program_discharges: number;
+          /** @sqlType DOUBLE */
+          readmissions_avoided_yoy: number;
+          /** @sqlType DOUBLE */
+          est_cost_avoided_yoy: number;
         }>;
       };
     program_monthly: {
