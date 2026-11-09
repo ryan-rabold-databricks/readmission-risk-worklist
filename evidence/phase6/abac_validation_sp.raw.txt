@@ -1,0 +1,35 @@
+{
+ "test_sp": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+ "not_leader": {
+  "identity": [
+   {
+    "me": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+    "leader": "false"
+   }
+  ],
+  "silver_patient": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "bronze_patient": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "bronze_encounter": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "silver_encounter": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "care_worklist": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "care_worklist_active_view": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "readmission_outcome": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "metric_view": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "synced_foreign_table": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "hidden_materialization": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "app_bronze_outreach": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:"
+ },
+ "leader": {
+  "identity": [
+   {
+    "me": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+    "leader": "false"
+   }
+  ],
+  "silver_patient": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "readmission_outcome": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "metric_view": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "care_worklist": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:"
+ },
+ "cleanup": "secret deleted; SP removed from leadership group"
+}

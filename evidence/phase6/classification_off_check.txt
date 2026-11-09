@@ -1,0 +1,9 @@
+# Check 1: catalog auto-classification off, no class.* tags on project columns
+# Run 2026-11-09T21:01:58Z as ryan.rabold@databricks.com, profile fevm-classic-stable
+
+$ databricks data-classification get-catalog-config catalogs/rtr_demo_catalog/config
+Error: Data Classification config not found
+
+SQL (warehouse b2f6ee775c2fa42c, includes hidden __ tables):
+SELECT concat_ws('.', schema_name, table_name, column_name) AS col, tag_name, tag_value FROM rtr_demo_catalog.information_schema.column_tags WHERE schema_name IN ('ehr_bronze','clinical_silver','care_management_silver','readmission_worklist_gold','readmission_worklist_app_bronze','phi_governance','ehr_raw') AND tag_name LIKE 'class.%' ORDER BY col
+Result: state=SUCCEEDED, total_row_count=0
