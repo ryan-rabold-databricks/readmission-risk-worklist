@@ -1,0 +1,399 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/811803537423383/runs/239651513636253?o=7474647046080636
+
+2026-11-08 19:32:53 "dev_readmit_governance" RUNNING
+2026-11-08 19:34:15 "dev_readmit_governance" INTERNAL_ERROR FAILED Task setup_governance failed with message: Workload failed, see run output for details.
+Task setup_governance FAILED:
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+---------------------------------------------------------------------------
+BadRequest                                Traceback (most recent call last)
+File ~/.ipykernel/21819/command--1-1363712391:19
+     16 entry = [ep for ep in metadata.distribution("readmit").entry_points if ep.name == "setup_governance"]
+     17 if entry:
+     18   # Load and execute the entrypoint, assumes no parameters
+---> 19   entry[0].load()()
+     20 else:
+     21   import importlib
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/readmit/governance/setup.py:113, in main(argv)
+    105     raise RuntimeError(
+    106         "class.* tags on project columns would be masked by catalog-level policies from other "
+    107         f"projects and conflict with readmit masks; remove them and exclude these schemas from "
+    108         f"auto-tagging (DECISIONS.md #60): {foreign}")
+    110 exempt = pipeline_identity(w, args.pipeline_id)
+    111 summary = {
+    112     "exempt_principal": exempt,
+--> 113     "scope_tag_policy": ensure_scope_tag_policy(w),
+    114     "column_tags": apply_column_tags(w, args.catalog),
+    115 }
+    116 for s in policies.function_statements(args.catalog, args.leadership_group):
+    117     sql(s)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/readmit/governance/setup.py:45, in ensure_scope_tag_policy(w)
+     43     tp = w.tag_policies.get_tag_policy(policies.SCOPE_TAG)
+     44 except NotFound:
+---> 45     w.tag_policies.create_tag_policy(TagPolicy(
+     46         tag_key=policies.SCOPE_TAG, values=[Value(name=policies.SCOPE_VALUE)],
+     47         description="Readmission worklist: column that scopes rows to a reader (ABAC row filter)."))
+     48     return "created"
+     49 if policies.SCOPE_VALUE not in {v.name for v in (tp.values or [])}:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/service/tags.py:263, in TagPoliciesAPI.create_tag_policy(self, tag_policy)
+    260 if cfg.workspace_id:
+    261     headers["X-Databricks-Workspace-Id"] = cfg.workspace_id
+--> 263 res = self._api.do("POST", "/api/2.1/tag-policies", body=body, headers=headers)
+    264 return TagPolicy.from_dict(res)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/core.py:95, in ApiClient.do(self, method, path, url, query, headers, body, raw, files, data, auth, response_headers)
+     91 # Merge custom headers with request-specific headers
+     92 # Request-specific headers take precedence
+     93 merged_headers = {**self._cfg._custom_headers, **(headers or {})}
+---> 95 return self._api_client.do(
+     96     method=method,
+     97     url=url,
+     98     query=query,
+     99     headers=merged_headers,
+    100     body=body,
+    101     raw=raw,
+    102     files=files,
+    103     data=data,
+    104     auth=auth,
+    105     response_headers=response_headers,
+    106 )
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/_base_client.py:220, in _BaseClient.do(self, method, url, query, headers, body, raw, files, data, auth, response_headers)
+    217     logger.debug(f"Retry disabled for non-seekable stream: type={type(data)}")
+    218     call = self._perform
+--> 220 response = call(
+    221     method,
+    222     url,
+    223     query=query,
+    224     headers=headers,
+    225     body=body,
+    226     raw=raw,
+    227     files=files,
+    228     data=data,
+    229     auth=auth,
+    230 )
+    232 resp = dict()
+    233 for header in response_headers if response_headers else []:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/retries.py:59, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     55         retry_reason = f"{type(err).__name__} is allowed to retry"
+     57 if retry_reason is None:
+     58     # raise if exception is not retryable
+---> 59     raise err
+     61 logger.debug(f"Retrying: {retry_reason} (sleeping ~{sleep}s)")
+     62 if before_retry:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/retries.py:38, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     36 while clock.time() < deadline and (max_attempts is None or attempt <= max_attempts):
+     37     try:
+---> 38         return func(*args, **kwargs)
+     39     except Exception as err:
+     40         last_err = err
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/_base_client.py:326, in _BaseClient._perform(self, method, url, query, headers, body, raw, files, data, auth)
+    324 error = self._error_parser.get_api_error(response)
+    325 if error is not None:
+--> 326     raise error from None
+    328 return response
+
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+
+Error: Task setup_governance failed!
+Error:
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+Trace:
+---------------------------------------------------------------------------
+BadRequest                                Traceback (most recent call last)
+File ~/.ipykernel/21819/command--1-1363712391:19
+     16 entry = [ep for ep in metadata.distribution("readmit").entry_points if ep.name == "setup_governance"]
+     17 if entry:
+     18   # Load and execute the entrypoint, assumes no parameters
+---> 19   entry[0].load()()
+     20 else:
+     21   import importlib
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/readmit/governance/setup.py:113, in main(argv)
+    105     raise RuntimeError(
+    106         "class.* tags on project columns would be masked by catalog-level policies from other "
+    107         f"projects and conflict with readmit masks; remove them and exclude these schemas from "
+    108         f"auto-tagging (DECISIONS.md #60): {foreign}")
+    110 exempt = pipeline_identity(w, args.pipeline_id)
+    111 summary = {
+    112     "exempt_principal": exempt,
+--> 113     "scope_tag_policy": ensure_scope_tag_policy(w),
+    114     "column_tags": apply_column_tags(w, args.catalog),
+    115 }
+    116 for s in policies.function_statements(args.catalog, args.leadership_group):
+    117     sql(s)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/readmit/governance/setup.py:45, in ensure_scope_tag_policy(w)
+     43     tp = w.tag_policies.get_tag_policy(policies.SCOPE_TAG)
+     44 except NotFound:
+---> 45     w.tag_policies.create_tag_policy(TagPolicy(
+     46         tag_key=policies.SCOPE_TAG, values=[Value(name=policies.SCOPE_VALUE)],
+     47         description="Readmission worklist: column that scopes rows to a reader (ABAC row filter)."))
+     48     return "created"
+     49 if policies.SCOPE_VALUE not in {v.name for v in (tp.values or [])}:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/service/tags.py:263, in TagPoliciesAPI.create_tag_policy(self, tag_policy)
+    260 if cfg.workspace_id:
+    261     headers["X-Databricks-Workspace-Id"] = cfg.workspace_id
+--> 263 res = self._api.do("POST", "/api/2.1/tag-policies", body=body, headers=headers)
+    264 return TagPolicy.from_dict(res)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/core.py:95, in ApiClient.do(self, method, path, url, query, headers, body, raw, files, data, auth, response_headers)
+     91 # Merge custom headers with request-specific headers
+     92 # Request-specific headers take precedence
+     93 merged_headers = {**self._cfg._custom_headers, **(headers or {})}
+---> 95 return self._api_client.do(
+     96     method=method,
+     97     url=url,
+     98     query=query,
+     99     headers=merged_headers,
+    100     body=body,
+    101     raw=raw,
+    102     files=files,
+    103     data=data,
+    104     auth=auth,
+    105     response_headers=response_headers,
+    106 )
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/_base_client.py:220, in _BaseClient.do(self, method, url, query, headers, body, raw, files, data, auth, response_headers)
+    217     logger.debug(f"Retry disabled for non-seekable stream: type={type(data)}")
+    218     call = self._perform
+--> 220 response = call(
+    221     method,
+    222     url,
+    223     query=query,
+    224     headers=headers,
+    225     body=body,
+    226     raw=raw,
+    227     files=files,
+    228     data=data,
+    229     auth=auth,
+    230 )
+    232 resp = dict()
+    233 for header in response_headers if response_headers else []:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/retries.py:59, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     55         retry_reason = f"{type(err).__name__} is allowed to retry"
+     57 if retry_reason is None:
+     58     # raise if exception is not retryable
+---> 59     raise err
+     61 logger.debug(f"Retrying: {retry_reason} (sleeping ~{sleep}s)")
+     62 if before_retry:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/retries.py:38, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     36 while clock.time() < deadline and (max_attempts is None or attempt <= max_attempts):
+     37     try:
+---> 38         return func(*args, **kwargs)
+     39     except Exception as err:
+     40         last_err = err
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-89f17a58-6d1d-4f51-9a7f-9f3c456083e0/lib/python3.12/site-packages/databricks/sdk/_base_client.py:326, in _BaseClient._perform(self, method, url, query, headers, body, raw, files, data, auth)
+    324 error = self._error_parser.get_api_error(response)
+    325 if error is not None:
+--> 326     raise error from None
+    328 return response
+
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+Task setup_governance FAILED:
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+---------------------------------------------------------------------------
+BadRequest                                Traceback (most recent call last)
+File ~/.ipykernel/21883/command--1-1363712391:19
+     16 entry = [ep for ep in metadata.distribution("readmit").entry_points if ep.name == "setup_governance"]
+     17 if entry:
+     18   # Load and execute the entrypoint, assumes no parameters
+---> 19   entry[0].load()()
+     20 else:
+     21   import importlib
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/readmit/governance/setup.py:113, in main(argv)
+    105     raise RuntimeError(
+    106         "class.* tags on project columns would be masked by catalog-level policies from other "
+    107         f"projects and conflict with readmit masks; remove them and exclude these schemas from "
+    108         f"auto-tagging (DECISIONS.md #60): {foreign}")
+    110 exempt = pipeline_identity(w, args.pipeline_id)
+    111 summary = {
+    112     "exempt_principal": exempt,
+--> 113     "scope_tag_policy": ensure_scope_tag_policy(w),
+    114     "column_tags": apply_column_tags(w, args.catalog),
+    115 }
+    116 for s in policies.function_statements(args.catalog, args.leadership_group):
+    117     sql(s)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/readmit/governance/setup.py:45, in ensure_scope_tag_policy(w)
+     43     tp = w.tag_policies.get_tag_policy(policies.SCOPE_TAG)
+     44 except NotFound:
+---> 45     w.tag_policies.create_tag_policy(TagPolicy(
+     46         tag_key=policies.SCOPE_TAG, values=[Value(name=policies.SCOPE_VALUE)],
+     47         description="Readmission worklist: column that scopes rows to a reader (ABAC row filter)."))
+     48     return "created"
+     49 if policies.SCOPE_VALUE not in {v.name for v in (tp.values or [])}:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/service/tags.py:263, in TagPoliciesAPI.create_tag_policy(self, tag_policy)
+    260 if cfg.workspace_id:
+    261     headers["X-Databricks-Workspace-Id"] = cfg.workspace_id
+--> 263 res = self._api.do("POST", "/api/2.1/tag-policies", body=body, headers=headers)
+    264 return TagPolicy.from_dict(res)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/core.py:95, in ApiClient.do(self, method, path, url, query, headers, body, raw, files, data, auth, response_headers)
+     91 # Merge custom headers with request-specific headers
+     92 # Request-specific headers take precedence
+     93 merged_headers = {**self._cfg._custom_headers, **(headers or {})}
+---> 95 return self._api_client.do(
+     96     method=method,
+     97     url=url,
+     98     query=query,
+     99     headers=merged_headers,
+    100     body=body,
+    101     raw=raw,
+    102     files=files,
+    103     data=data,
+    104     auth=auth,
+    105     response_headers=response_headers,
+    106 )
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/_base_client.py:220, in _BaseClient.do(self, method, url, query, headers, body, raw, files, data, auth, response_headers)
+    217     logger.debug(f"Retry disabled for non-seekable stream: type={type(data)}")
+    218     call = self._perform
+--> 220 response = call(
+    221     method,
+    222     url,
+    223     query=query,
+    224     headers=headers,
+    225     body=body,
+    226     raw=raw,
+    227     files=files,
+    228     data=data,
+    229     auth=auth,
+    230 )
+    232 resp = dict()
+    233 for header in response_headers if response_headers else []:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/retries.py:59, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     55         retry_reason = f"{type(err).__name__} is allowed to retry"
+     57 if retry_reason is None:
+     58     # raise if exception is not retryable
+---> 59     raise err
+     61 logger.debug(f"Retrying: {retry_reason} (sleeping ~{sleep}s)")
+     62 if before_retry:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/retries.py:38, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     36 while clock.time() < deadline and (max_attempts is None or attempt <= max_attempts):
+     37     try:
+---> 38         return func(*args, **kwargs)
+     39     except Exception as err:
+     40         last_err = err
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/_base_client.py:326, in _BaseClient._perform(self, method, url, query, headers, body, raw, files, data, auth)
+    324 error = self._error_parser.get_api_error(response)
+    325 if error is not None:
+--> 326     raise error from None
+    328 return response
+
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+
+Error: Task setup_governance failed!
+Error:
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+Trace:
+---------------------------------------------------------------------------
+BadRequest                                Traceback (most recent call last)
+File ~/.ipykernel/21883/command--1-1363712391:19
+     16 entry = [ep for ep in metadata.distribution("readmit").entry_points if ep.name == "setup_governance"]
+     17 if entry:
+     18   # Load and execute the entrypoint, assumes no parameters
+---> 19   entry[0].load()()
+     20 else:
+     21   import importlib
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/readmit/governance/setup.py:113, in main(argv)
+    105     raise RuntimeError(
+    106         "class.* tags on project columns would be masked by catalog-level policies from other "
+    107         f"projects and conflict with readmit masks; remove them and exclude these schemas from "
+    108         f"auto-tagging (DECISIONS.md #60): {foreign}")
+    110 exempt = pipeline_identity(w, args.pipeline_id)
+    111 summary = {
+    112     "exempt_principal": exempt,
+--> 113     "scope_tag_policy": ensure_scope_tag_policy(w),
+    114     "column_tags": apply_column_tags(w, args.catalog),
+    115 }
+    116 for s in policies.function_statements(args.catalog, args.leadership_group):
+    117     sql(s)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/readmit/governance/setup.py:45, in ensure_scope_tag_policy(w)
+     43     tp = w.tag_policies.get_tag_policy(policies.SCOPE_TAG)
+     44 except NotFound:
+---> 45     w.tag_policies.create_tag_policy(TagPolicy(
+     46         tag_key=policies.SCOPE_TAG, values=[Value(name=policies.SCOPE_VALUE)],
+     47         description="Readmission worklist: column that scopes rows to a reader (ABAC row filter)."))
+     48     return "created"
+     49 if policies.SCOPE_VALUE not in {v.name for v in (tp.values or [])}:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/service/tags.py:263, in TagPoliciesAPI.create_tag_policy(self, tag_policy)
+    260 if cfg.workspace_id:
+    261     headers["X-Databricks-Workspace-Id"] = cfg.workspace_id
+--> 263 res = self._api.do("POST", "/api/2.1/tag-policies", body=body, headers=headers)
+    264 return TagPolicy.from_dict(res)
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/core.py:95, in ApiClient.do(self, method, path, url, query, headers, body, raw, files, data, auth, response_headers)
+     91 # Merge custom headers with request-specific headers
+     92 # Request-specific headers take precedence
+     93 merged_headers = {**self._cfg._custom_headers, **(headers or {})}
+---> 95 return self._api_client.do(
+     96     method=method,
+     97     url=url,
+     98     query=query,
+     99     headers=merged_headers,
+    100     body=body,
+    101     raw=raw,
+    102     files=files,
+    103     data=data,
+    104     auth=auth,
+    105     response_headers=response_headers,
+    106 )
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/_base_client.py:220, in _BaseClient.do(self, method, url, query, headers, body, raw, files, data, auth, response_headers)
+    217     logger.debug(f"Retry disabled for non-seekable stream: type={type(data)}")
+    218     call = self._perform
+--> 220 response = call(
+    221     method,
+    222     url,
+    223     query=query,
+    224     headers=headers,
+    225     body=body,
+    226     raw=raw,
+    227     files=files,
+    228     data=data,
+    229     auth=auth,
+    230 )
+    232 resp = dict()
+    233 for header in response_headers if response_headers else []:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/retries.py:59, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     55         retry_reason = f"{type(err).__name__} is allowed to retry"
+     57 if retry_reason is None:
+     58     # raise if exception is not retryable
+---> 59     raise err
+     61 logger.debug(f"Retrying: {retry_reason} (sleeping ~{sleep}s)")
+     62 if before_retry:
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/retries.py:38, in retried.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
+     36 while clock.time() < deadline and (max_attempts is None or attempt <= max_attempts):
+     37     try:
+---> 38         return func(*args, **kwargs)
+     39     except Exception as err:
+     40         last_err = err
+
+File /local_disk0/.ephemeral_nfs/envs/pythonEnv-f581d2f6-ca07-4c0f-a10b-f61d85bf1729/lib/python3.12/site-packages/databricks/sdk/_base_client.py:326, in _BaseClient._perform(self, method, url, query, headers, body, raw, files, data, auth)
+    324 error = self._error_parser.get_api_error(response)
+    325 if error is not None:
+--> 326     raise error from None
+    328 return response
+
+BadRequest: The maximum number of tag policies allowed is reached for the account.
+Error: failed to reach TERMINATED or SKIPPED, got INTERNAL_ERROR: Task setup_governance failed with message: Workload failed, see run output for details.

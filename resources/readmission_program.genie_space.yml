@@ -1,0 +1,92 @@
+# Readmission Program Genie Agent for Care Management Leadership (DECISIONS.md #63).
+# Declared in the bundle like the warehouse (#37) and Lakebase (#40). KPIs come from the
+# metric view, so Genie and the Program tab share one definition (#61). Users ask on their
+# own identity (the app's Genie plugin runs on behalf of the user), so the ABAC masks and
+# facility filter apply to every answer (#62).
+# Fresh environment: deploy, run the pipeline, run <env>_readmit_governance (creates the
+# metric view), then deploy again if this resource failed on the missing view.
+# IDs are fixed 32-hex values so redeploys do not churn the space.
+
+resources:
+  genie_spaces:
+    readmission_program:
+      title: Readmission Program (${var.env})
+      description: >-
+        Ask about the readmission prevention program: readmission and 7-day follow-up rates
+        vs the prior year, outreach reach rate, estimated readmissions and cost avoided, by
+        facility, risk tier, condition, and month. Estimates are not causal measures.
+      warehouse_id: ${resources.sql_warehouses.readmit_wh.id}
+      parent_path: ${workspace.file_path}/genie
+      permissions:
+        - group_name: ${var.leadership_group}
+          level: CAN_RUN
+      serialized_space:
+        version: 2
+        config:
+          sample_questions:
+            - id: "a0000000000000000000000000000001"
+              question: ["What is our estimated cost avoided, by both methods?"]
+            - id: "a0000000000000000000000000000002"
+              question: ["Which facility has the highest readmission rate compared with last year?"]
+            - id: "a0000000000000000000000000000003"
+              question: ["Show the monthly readmission rate and 7-day follow-up rate trend"]
+            - id: "a0000000000000000000000000000004"
+              question: ["What is the reach rate and median time to first contact by risk tier?"]
+        data_sources:
+          tables:
+            - identifier: ${var.catalog}.clinical_silver.facility
+            - identifier: ${var.catalog}.readmission_worklist_gold.care_worklist
+              column_configs:
+                - column_name: outreach_brief
+                  exclude: true
+                - column_name: patient_display_name
+                  exclude: true
+                - column_name: patient_id
+                  exclude: true
+                - column_name: phone
+                  exclude: true
+            - identifier: ${var.catalog}.readmission_worklist_gold.readmission_outcome
+          metric_views:
+            - identifier: ${var.catalog}.readmission_worklist_gold.readmission_program_metrics
+        instructions:
+          text_instructions:
+            - id: "b0000000000000000000000000000001"
+              content:
+                - "Audience: Care Management Leadership. Answer program questions in aggregate; never list patient names, phone numbers, or MRNs."
+                - "For any KPI (readmission rate, 7-day follow-up rate, reach rate, readmissions avoided, cost avoided, worklist and overflow items, time to first contact), query the metric view readmission_program_metrics with MEASURE(). Do not recompute these from readmission_outcome; the metric view is the governed definition shared with the Program tab."
+                - "Program period: discharges from go-live minus one day (dimension period = 'program'). Baseline: the same span one year earlier (period = 'baseline'). 'Compared with last year' means program_* vs baseline_* measures."
+                - "Readmission rates use matured 30-day labels only. For monthly trends, filter month_fully_matured = true so recent months are not shown falsely low."
+                - "Estimated readmissions and cost avoided have two methods: within risk tier (readmissions_avoided, est_cost_avoided; the headline) and vs prior year (readmissions_avoided_vs_prior_year, est_cost_avoided_vs_prior_year; a cross-check). Report both when asked about savings, and say they are estimates, not causal measures. Cost uses an assumed cost per readmission (a rough estimate from AHRQ HCUP Statistical Brief #248) that the organization should replace with its own."
+                - "The within-tier estimate is recomputed inside each slice, so facility or month values do not add up exactly to the overall figure; say so if a user sums them."
+                - "Use care_worklist only for operational questions about specific worklist days (counts by status, tier, facility, assigned care manager). Use clinical_silver.facility for facility names when not using the metric view."
+          example_question_sqls:
+            - id: "c0000000000000000000000000000001"
+              question: ["What is our estimated cost avoided?"]
+              sql:
+                - "SELECT MEASURE(est_cost_avoided) AS est_cost_avoided, MEASURE(readmissions_avoided) AS readmissions_avoided, MEASURE(est_cost_avoided_vs_prior_year) AS est_cost_avoided_vs_prior_year, MEASURE(readmissions_avoided_vs_prior_year) AS readmissions_avoided_vs_prior_year FROM ${var.catalog}.readmission_worklist_gold.readmission_program_metrics"
+            - id: "c0000000000000000000000000000002"
+              question: ["Readmission rate by facility vs last year"]
+              sql:
+                - "SELECT facility_name, MEASURE(program_readmission_rate) AS program_readmission_rate, MEASURE(baseline_readmission_rate) AS baseline_readmission_rate, MEASURE(program_followup_7d_rate) AS program_followup_7d_rate, MEASURE(reach_rate) AS reach_rate FROM ${var.catalog}.readmission_worklist_gold.readmission_program_metrics GROUP BY facility_name ORDER BY program_readmission_rate DESC"
+            - id: "c0000000000000000000000000000003"
+              question: ["Monthly readmission rate trend"]
+              sql:
+                - "SELECT discharge_month, MEASURE(readmission_rate) AS readmission_rate, MEASURE(followup_7d_rate) AS followup_7d_rate FROM ${var.catalog}.readmission_worklist_gold.readmission_program_metrics WHERE month_fully_matured GROUP BY discharge_month ORDER BY discharge_month"
+            - id: "c0000000000000000000000000000004"
+              question: ["Reach rate by risk tier"]
+              sql:
+                - "SELECT risk_tier, MEASURE(worklist_items) AS worklist_items, MEASURE(reach_rate) AS reach_rate, MEASURE(median_first_contact_hours) AS median_first_contact_hours FROM ${var.catalog}.readmission_worklist_gold.readmission_program_metrics WHERE assignment_status IS NOT NULL GROUP BY risk_tier ORDER BY risk_tier"
+        benchmarks:
+          questions:
+            - id: "d0000000000000000000000000000001"
+              question: ["How much cost has the program avoided?"]
+              answer:
+                - format: SQL
+                  content:
+                    - "SELECT MEASURE(est_cost_avoided) AS est_cost_avoided, MEASURE(est_cost_avoided_vs_prior_year) AS est_cost_avoided_vs_prior_year FROM ${var.catalog}.readmission_worklist_gold.readmission_program_metrics"
+            - id: "d0000000000000000000000000000002"
+              question: ["What is the program readmission rate vs the baseline?"]
+              answer:
+                - format: SQL
+                  content:
+                    - "SELECT MEASURE(program_readmission_rate) AS program_readmission_rate, MEASURE(baseline_readmission_rate) AS baseline_readmission_rate FROM ${var.catalog}.readmission_worklist_gold.readmission_program_metrics"

@@ -1,0 +1,32 @@
+# Idempotent PHI governance and semantic layer: column tags, mask and row filter functions,
+# schema-level ABAC policies, and the readmission_program_metrics metric view
+# (DECISIONS.md #61, #62). Run after the pipeline has created the silver and gold tables,
+# and after every deploy that changes src/readmit/governance; reruns converge to the same state.
+
+resources:
+  jobs:
+    readmit_governance:
+      name: ${var.env}_readmit_governance
+      description: PHI tags, ABAC masks and facility filter, and the program metric view.
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      tasks:
+        - task_key: setup_governance
+          environment_key: default
+          python_wheel_task:
+            package_name: readmit
+            entry_point: setup_governance
+            parameters:
+              - --env=${var.env}
+              - --catalog=${var.catalog}
+              - --warehouse-id=${resources.sql_warehouses.readmit_wh.id}
+              - --pipeline-id=${resources.pipelines.readmit_pipeline.id}
+              - --leadership-group=${var.leadership_group}
+              - --go-live=${var.program_go_live}
+              - --avg-cost=${var.avg_readmission_cost}
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../dist/*.whl

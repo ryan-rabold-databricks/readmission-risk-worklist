@@ -1,0 +1,27 @@
+{
+ "question": "How much cost has the program avoided?",
+ "status": "MessageStatus.COMPLETED",
+ "sql": "SELECT MEASURE(`est_cost_avoided`) AS `est_cost_avoided`, MEASURE(`readmissions_avoided`) AS `readmissions_avoided`, MEASURE(`est_cost_avoided_vs_prior_year`) AS `est_cost_avoided_vs_prior_year`, MEASURE(`readmissions_avoided_vs_prior_year`) AS `readmissions_avoided_vs_prior_year`\nFROM `rtr_demo_catalog`.`readmission_worklist_gold`.`readmission_program_metrics`\nGROUP BY ALL",
+ "rows": [
+  {
+   "est_cost_avoided": "2641204.4427080425",
+   "readmissions_avoided": "176.08029618053615",
+   "est_cost_avoided_vs_prior_year": "2201449.2415896957",
+   "readmissions_avoided_vs_prior_year": "146.7632827726464"
+  }
+ ],
+ "text": "The program\u2019s estimated cost avoided is **$2,641,204.44**, based on **176.08** estimated readmissions avoided. As a cross-check against last year, estimated cost avoided vs prior year is **$2,201,449.24**, based on **146.76** estimated readmissions avoided; both figures are estimates rather than causal measures."
+}
+{
+ "question": "Which facility has the highest readmission rate compared with last year?",
+ "status": "MessageStatus.COMPLETED",
+ "sql": "WITH `facility_rates` AS (\n  SELECT\n    `facility_name`,\n    MEASURE(`program_readmission_rate`) AS `program_readmission_rate`,\n    MEASURE(`baseline_readmission_rate`) AS `baseline_readmission_rate`\n  FROM `rtr_demo_catalog`.`readmission_worklist_gold`.`readmission_program_metrics`\n  WHERE `facility_name` IS NOT NULL\n  GROUP BY ALL\n), `ranked` AS (\n  SELECT\n    `facility_name`,\n    `program_readmission_rate`,\n    `baseline_readmission_rate`,\n    RANK() OVER (ORDER BY `program_readmission_rate` DESC) AS `facility_rank`\n  FROM `facility_rates`\n  WHERE `program_readmission_rate` IS NOT NULL\n)\nSELECT\n  `facility_name`,\n  `program_readmission_rate`,\n  `baseline_readmission_rate`\nFROM `ranked`\nWHERE `facility_rank` = 1",
+ "rows": [
+  {
+   "facility_name": "Riverbend Community Hospital",
+   "program_readmission_rate": "0.19447827852212748",
+   "baseline_readmission_rate": "0.20473705339221196"
+  }
+ ],
+ "text": "**Riverbend Community Hospital** has the highest current readmission rate in the results shown, with a program readmission rate of **19.45%** versus a baseline readmission rate of **20.47%** last year. In this result, **Riverbend Community Hospital** is highest even though its current rate is **1.00 percentage point lower** than last year."
+}

@@ -19,6 +19,7 @@ backfill_program = "readmit.worklist.backfill:main"
 setup_lakebase = "readmit.lakebase.setup:main"
 publish_worklist = "readmit.lakebase.publish:main"
 simulate_outreach = "readmit.lakebase.outreach_sim:main"
+setup_governance = "readmit.governance.setup:main"
 
 [build-system]
 requires = ["hatchling"]
