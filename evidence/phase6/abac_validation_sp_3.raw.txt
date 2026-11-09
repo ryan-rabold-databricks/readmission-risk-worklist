@@ -1,0 +1,131 @@
+{
+ "test_sp": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+ "not_leader": {
+  "identity": [
+   {
+    "me": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+    "leader": "false",
+    "account_leader": "false"
+   }
+  ],
+  "silver_patient": [
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1968-01-01"
+   },
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1976-01-01"
+   }
+  ],
+  "bronze_patient": [
+   {
+    "first_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "birth_date": "1965-01-01"
+   }
+  ],
+  "bronze_encounter": [
+   {
+    "n": "0",
+    "sample": null
+   }
+  ],
+  "silver_encounter": [
+   {
+    "n": "0",
+    "sample": null
+   }
+  ],
+  "care_worklist": [
+   {
+    "n": "0",
+    "name": null,
+    "phone": null
+   }
+  ],
+  "care_worklist_active_view": [
+   {
+    "n": "0",
+    "name": null
+   }
+  ],
+  "readmission_outcome": [
+   {
+    "n": "0",
+    "facilities": "0"
+   }
+  ],
+  "metric_view": [
+   {
+    "program_discharges": "0",
+    "cost": "0.0"
+   }
+  ],
+  "synced_foreign_table": [
+   {
+    "n": "0",
+    "name": null
+   }
+  ],
+  "hidden_materialization": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "app_bronze_outreach": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:"
+ },
+ "leader_wait_seconds": 307,
+ "leader": {
+  "identity": [
+   {
+    "me": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+    "leader": "true",
+    "account_leader": "false"
+   }
+  ],
+  "silver_patient": [
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1968-01-01"
+   },
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1976-01-01"
+   }
+  ],
+  "readmission_outcome": [
+   {
+    "n": "113711",
+    "facilities": "5"
+   }
+  ],
+  "metric_view": [
+   {
+    "program_discharges": "28094",
+    "cost": "2641204.4427080425"
+   }
+  ],
+  "care_worklist": [
+   {
+    "n": "8640",
+    "name": "***",
+    "phone": "***"
+   }
+  ]
+ },
+ "cleanup": "secret deleted; SP removed from leadership group"
+}

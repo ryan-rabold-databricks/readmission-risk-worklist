@@ -1,0 +1,17 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/811803537423383/runs/1124113551028407?o=7474647046080636
+
+2026-11-09 16:21:20 "dev_readmit_governance" RUNNING
+2026-11-09 16:22:31 "dev_readmit_governance" TERMINATED SUCCESS
+WARNING: care_mgmt_leadership is workspace-local; skipping leader grants, leaders read through account users. Use an account group in production (DECISIONS.md #65).
+{
+  "exempt_principal": "ryan.rabold@databricks.com",
+  "column_tags": {
+    "created": 0,
+    "updated": 0,
+    "unchanged": 25
+  },
+  "functions": 3,
+  "policies": 12,
+  "grants": 4,
+  "metric_view": "rtr_demo_catalog.readmission_worklist_gold.readmission_program_metrics"
+}

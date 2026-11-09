@@ -1,0 +1,128 @@
+{
+ "test_sp": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+ "not_leader": {
+  "identity": [
+   {
+    "me": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+    "leader": "false"
+   }
+  ],
+  "silver_patient": [
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1968-01-01"
+   },
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1976-01-01"
+   }
+  ],
+  "bronze_patient": [
+   {
+    "first_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "birth_date": "1965-01-01"
+   }
+  ],
+  "bronze_encounter": [
+   {
+    "n": "0",
+    "sample": null
+   }
+  ],
+  "silver_encounter": [
+   {
+    "n": "0",
+    "sample": null
+   }
+  ],
+  "care_worklist": [
+   {
+    "n": "0",
+    "name": null,
+    "phone": null
+   }
+  ],
+  "care_worklist_active_view": [
+   {
+    "n": "0",
+    "name": null
+   }
+  ],
+  "readmission_outcome": [
+   {
+    "n": "0",
+    "facilities": "0"
+   }
+  ],
+  "metric_view": [
+   {
+    "program_discharges": "0",
+    "cost": "0.0"
+   }
+  ],
+  "synced_foreign_table": [
+   {
+    "n": "1465",
+    "name": "Yolanda Williams"
+   }
+  ],
+  "hidden_materialization": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:",
+  "app_bronze_outreach": "ERROR: [INSUFFICIENT_PERMISSIONS] Insufficient privileges:"
+ },
+ "leader": {
+  "identity": [
+   {
+    "me": "099d00fc-f60c-44ce-bb47-85ff2152d758",
+    "leader": "false"
+   }
+  ],
+  "silver_patient": [
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1968-01-01"
+   },
+   {
+    "first_name": "***",
+    "last_name": "***",
+    "mrn": "***",
+    "phone": "***",
+    "zip_code": "***",
+    "birth_date": "1976-01-01"
+   }
+  ],
+  "readmission_outcome": [
+   {
+    "n": "0",
+    "facilities": "0"
+   }
+  ],
+  "metric_view": [
+   {
+    "program_discharges": "0",
+    "cost": "0.0"
+   }
+  ],
+  "care_worklist": [
+   {
+    "n": "0",
+    "name": null,
+    "phone": null
+   }
+  ]
+ },
+ "cleanup": "secret deleted; SP removed from leadership group"
+}

@@ -1,7 +1,7 @@
 """ABAC validation as a non-exempt test service principal (DECISIONS.md #62).
 
 Run by the author (the auto-mode agent may not mint credentials):
-    .venv/bin/python -I evidence/phase6/abac_sp_check.py | tee evidence/phase6/abac_validation_sp.raw.txt
+    .venv/bin/python -I evidence/phase6/abac_sp_check.py | tee evidence/phase6/abac_validation_sp_<n>.raw.txt
 
 Creates (once) service principal readmit-phi-test with workspace and SQL access and
 CAN_USE on the dev warehouse. A one-hour OAuth secret exists only inside this process and
@@ -20,7 +20,7 @@ LEADERSHIP = "care_mgmt_leadership"
 GOLD = f"{CAT}.readmission_worklist_gold"
 
 CHECKS = {
-    "identity": f"SELECT current_user() AS me, is_account_group_member('{LEADERSHIP}') AS leader",
+    "identity": f"SELECT current_user() AS me, is_member('{LEADERSHIP}') AS leader, is_account_group_member('{LEADERSHIP}') AS account_leader",
     "silver_patient": f"SELECT first_name, last_name, mrn, phone, zip_code, birth_date FROM {CAT}.clinical_silver.patient ORDER BY patient_id LIMIT 2",
     "bronze_patient": f"SELECT first_name, mrn, phone, birth_date FROM {CAT}.ehr_bronze.patient_raw LIMIT 1",
     "bronze_encounter": f"SELECT count(*) AS n, max(encounter_number) AS sample FROM {CAT}.ehr_bronze.encounter_raw",
@@ -69,7 +69,14 @@ def main() -> None:
         out["not_leader"] = {k: q(w, v) for k, v in CHECKS.items()}
         admin.groups.patch(group.id, **scim(iam.Patch(op=iam.PatchOp.ADD, value={"members": [{"value": sp.id}]})))
         try:
-            time.sleep(90)  # group membership propagation
+            # Poll until the filter's is_member() sees the membership (DECISIONS.md #65), up to 10 min.
+            start = time.time()
+            while time.time() - start < 600:
+                time.sleep(30)
+                ident = q(w, CHECKS["identity"])
+                if isinstance(ident, list) and ident and ident[0]["leader"] == "true":
+                    break
+            out["leader_wait_seconds"] = round(time.time() - start)
             out["leader"] = {k: q(w, CHECKS[k]) for k in LEADER_CHECKS}
         finally:
             admin.groups.patch(group.id, **scim(iam.Patch(op=iam.PatchOp.REMOVE, path=f'members[value eq "{sp.id}"]')))

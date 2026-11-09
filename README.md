@@ -178,9 +178,9 @@ databricks bundle deploy -t dev --profile <profile>
 databricks bundle run readmission_worklist_app -t dev --profile <profile>
 ```
 
-In a shared dev catalog, exclude the project schemas from catalog data classification auto-tagging (`databricks data-classification update-catalog-config catalogs/<catalog>/config excluded_schemas ...`): auto-applied `class.*` tags can be matched by other projects' catalog-level masks, and a masked pipeline identity writes masked data permanently (DECISIONS #60).
+In a shared dev catalog, turn off catalog data classification auto-tagging (dev: off for all of `rtr_demo_catalog`, DECISIONS #64) or exclude the project schemas from it (`databricks data-classification update-catalog-config catalogs/<catalog>/config excluded_schemas ...`): auto-applied `class.*` tags can be matched by other projects' catalog-level masks, and a masked pipeline identity writes masked data permanently (DECISIONS #60).
 
-Program Settings and the Genie Agent are limited to the workspace group `care_mgmt_leadership` (bundle variable `leadership_group`); add leaders to it (`databricks groups create --json '{"displayName": "care_mgmt_leadership"}'` in a new workspace). Care managers see the worklist for the facilities they are rostered at, which leadership sets in Program Settings.
+Program Settings and the Genie Agent are limited to the group `care_mgmt_leadership` (bundle variable `leadership_group`); add leaders to it. **Dev uses a workspace-local group** (`databricks groups create --json '{"displayName": "care_mgmt_leadership"}'`) because the developer is not an account admin. **For production, use an account-level group assigned to the workspace:** Unity Catalog cannot grant to workspace-local groups, so the governance job skips the leader read grants for a workspace-local group and fails outright when no `masked_reader_group` is set (DECISIONS #65). In dev, leaders read Program data through `masked_reader_group` = `account users`. Care managers see the worklist for the facilities they are rostered at, which leadership sets in Program Settings.
 
 ## Repository structure
 
@@ -352,7 +352,8 @@ Bundle variables in `databricks.yml`:
 | `warehouse_max_clusters` | Scale-out limit for `<env>_readmit_wh` (bundle-managed) | `1` (dev), `2` (prod) |
 | `program_go_live` | First worklist day of the program; backfill start | `2026-05-01` |
 | `brief_days` | Outreach briefs are drafted for the latest N worklist days | `14` |
-| `leadership_group` | Workspace group for Care Management Leadership (Program Settings, Genie, all facilities under the row filter) | `care_mgmt_leadership` |
+| `leadership_group` | Group for Care Management Leadership (Program Settings, Genie, all facilities under the row filter, UC reads for the Program tab). Workspace-local in dev; use an account group in production | `care_mgmt_leadership` |
+| `masked_reader_group` | Group granted USE SCHEMA on the masked schemas, so it reads PHI through the ABAC masks. Empty grants nothing | `""` (dev: `account users`) |
 | `avg_readmission_cost` | Assumed cost of one readmission (USD) for estimated cost avoided. The default is a rough estimate based on [AHRQ HCUP Statistical Brief #248](https://hcup-us.ahrq.gov/reports/statbriefs/sb248-Hospital-Readmissions-2010-2016.jsp) ($14,400 average 30-day readmission cost in 2016, hospital cost, all payers); **set the customer's own cost when deploying** | `15000` |
 | `service_principal_id` | Service principal that runs prod workloads (`run_as`) | application ID |
 

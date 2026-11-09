@@ -31,6 +31,9 @@ PHI_COLUMNS: dict[tuple[str, str], dict[str, str]] = {
     ("clinical_silver", "patient"): _PATIENT,
     ("clinical_silver", "encounter"): {"encounter_number": "account_number"},
     ("readmission_worklist_gold", "care_worklist"): {"patient_display_name": "name", "phone": "phone_number"},
+    # UC foreign table over the Lakebase copy; account users inherit catalog SELECT on it
+    # (DECISIONS.md #66). The app reads Postgres directly, so this does not affect it.
+    ("readmission_worklist_gold", "care_worklist_synced"): {"patient_display_name": "name", "phone": "phone_number"},
 }
 # Patient-level facts filtered to the reader's facilities. Reference and roster tables
 # (facility, care_team_assignment, care_team_roster) are not filtered: the filter
@@ -41,9 +44,17 @@ FACILITY_TABLES = (
     ("readmission_worklist_gold", "discharge_features"),
     ("readmission_worklist_gold", "readmission_outcome"),
     ("readmission_worklist_gold", "care_worklist"),
+    ("readmission_worklist_gold", "care_worklist_synced"),
 )
 POLICY_SCHEMAS = ("ehr_bronze", "clinical_silver", "care_management_silver", "readmission_worklist_gold")
 POLICY_PREFIX = "readmit_"
+# What leadership reads as itself: the app's Program and Program Settings queries
+# (*.obo.sql) and the Genie Agent's tables (DECISIONS.md #54, #63, #65).
+LEADER_READ = {
+    "clinical_silver": ("facility",),
+    "care_management_silver": ("care_manager_capacity", "care_team_assignment", "program_setting", "risk_tier_policy"),
+    "readmission_worklist_gold": ("readmission_outcome", "readmission_program_metrics", "care_worklist"),
+}
 
 
 def conflicting_policies(policies_by_schema: dict[str, list]) -> list[str]:
@@ -101,13 +112,33 @@ RETURN CASE WHEN value IS NULL OR year(value) <= year(current_date()) - 90 THEN 
         f"""CREATE OR REPLACE FUNCTION {fq}.filter_by_facility(facility_id STRING)
 RETURNS BOOLEAN
 COMMENT 'ABAC row filter: {group} sees every facility; anyone else sees the facilities they are assigned to today in care_team_assignment.'
-RETURN is_account_group_member('{group}') OR EXISTS (
+RETURN is_member('{group}') OR EXISTS (
   SELECT 1 FROM {catalog}.care_management_silver.care_team_assignment a
   WHERE a.facility_id = filter_by_facility.facility_id
     AND a.care_manager_email = lower(current_user())
     AND a.effective_date <= current_date()
     AND (a.expiration_date IS NULL OR a.expiration_date > current_date()))""",
     ]
+
+
+def grant_statements(catalog: str, leadership_group: str, masked_reader_group: str = "",
+                     leader_grants: bool = True) -> list[str]:
+    """Schema and table grants; GRANT is additive and idempotent. USE CATALOG is the
+    catalog owner's to grant and is not issued here.
+
+    masked_reader_group (dev: `account users`, which already holds catalog-wide SELECT,
+    DECISIONS.md #6) gets USE SCHEMA on every masked schema, so it reads through the masks.
+    leader_grants is False for a workspace-local leadership group, which Unity Catalog
+    cannot grant to (DECISIONS.md #65).
+    """
+    lead = _q(leadership_group)
+    out = []
+    if leader_grants:
+        out += [f"GRANT USE SCHEMA ON SCHEMA {catalog}.{s} TO {lead}" for s in LEADER_READ]
+        out += [f"GRANT SELECT ON TABLE {catalog}.{s}.{t} TO {lead}" for s, ts in LEADER_READ.items() for t in ts]
+    if masked_reader_group:
+        out += [f"GRANT USE SCHEMA ON SCHEMA {catalog}.{s} TO {_q(masked_reader_group)}" for s in POLICY_SCHEMAS]
+    return out
 
 
 def policy_statements(catalog: str, exempt_principal: str) -> list[str]:

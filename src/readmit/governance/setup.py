@@ -8,7 +8,9 @@ are CREATE OR REPLACE.
 2. Fail if another project's policy matches the tags used here; set column tags.
 3. Mask and row filter functions in phi_governance; schema-level ABAC policies that
    exempt only the pipeline's run-as identity.
-4. Metric view readmission_worklist_gold.readmission_program_metrics.
+4. Schema and table grants for leadership (skipped for a workspace-local group) and, in dev,
+   USE SCHEMA for the masked reader group.
+5. Metric view readmission_worklist_gold.readmission_program_metrics.
 
 SQL runs on the SQL warehouse: creating policies that use tag functions needs
 Databricks Runtime 18 or above (ABAC docs).
@@ -72,6 +74,22 @@ def apply_column_tags(w: WorkspaceClient, catalog: str) -> dict[str, int]:
     return counts
 
 
+def leadership_is_account_group(w: WorkspaceClient, group: str, masked_reader_group: str) -> bool:
+    """Unity Catalog cannot grant to workspace-local groups. That is acceptable only when
+    leaders already read through masked_reader_group (dev, DECISIONS.md #65)."""
+    found = list(w.groups.list(filter=f'displayName eq "{group}"', attributes="displayName,meta"))
+    if not found:
+        raise RuntimeError(f"Leadership group {group} not found in the workspace")
+    if found[0].meta and found[0].meta.resource_type == "WorkspaceGroup":
+        if not masked_reader_group:
+            raise RuntimeError(f"{group} is a workspace-local group, which Unity Catalog cannot grant to; "
+                               "use an account group (DECISIONS.md #65)")
+        print(f"WARNING: {group} is workspace-local; skipping leader grants, leaders read through "
+              f"{masked_reader_group}. Use an account group in production (DECISIONS.md #65).")
+        return False
+    return True
+
+
 def pipeline_identity(w: WorkspaceClient, pipeline_id: str) -> str:
     p = w.pipelines.get(pipeline_id)
     identity = p.run_as_user_name or p.creator_user_name
@@ -92,6 +110,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--warehouse-id", required=True)
     p.add_argument("--pipeline-id", required=True)
     p.add_argument("--leadership-group", required=True)
+    p.add_argument("--masked-reader-group", default="")
     p.add_argument("--go-live", required=True)
     p.add_argument("--avg-cost", required=True)
     return p.parse_args(argv)
@@ -120,6 +139,11 @@ def main(argv: list[str] | None = None) -> None:
     for s in policies.policy_statements(args.catalog, exempt):
         sql(s)
     summary["policies"] = len(policies.POLICY_SCHEMAS) * 3
+    leader_grants = leadership_is_account_group(w, args.leadership_group, args.masked_reader_group)
+    grants = policies.grant_statements(args.catalog, args.leadership_group, args.masked_reader_group, leader_grants)
+    for s in grants:
+        sql(s)
+    summary["grants"] = len(grants)
     sql(metric_view.create_statement(args.catalog, args.go_live, args.avg_cost))
     summary["metric_view"] = f"{args.catalog}.{metric_view.METRIC_VIEW}"
     print(json.dumps(summary, indent=2))

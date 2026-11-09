@@ -67,8 +67,11 @@ variables:
     description: Assumed cost of one readmission (USD) for estimated cost avoided. Rough estimate from HCUP SB #248; set the customer's own figure per target.
     default: "15000"
   leadership_group:
-    description: Workspace group for Care Management Leadership (Program Settings access; sees every facility under the ABAC row filter).
+    description: Group for Care Management Leadership (Program Settings access; sees every facility under the ABAC row filter; UC reads for the Program tab and Genie). Dev uses a workspace-local group because the developer is not an account admin; use an account group in production, since Unity Catalog cannot grant to workspace-local groups (DECISIONS.md #65).
     default: care_mgmt_leadership
+  masked_reader_group:
+    description: Group granted USE SCHEMA on the masked schemas so it reads PHI through the ABAC masks. Empty grants nothing.
+    default: ""
   warehouse_max_clusters:
     description: Upper bound for warehouse scale-out (1 for single-developer dev; raise for concurrent demo or prod use).
     default: 1
@@ -94,6 +97,8 @@ targets:
       env: dev
       catalog: rtr_demo_catalog
       lakebase_owner_role: ryan-rabold
+      # account users already hold catalog-wide SELECT in this shared catalog (DECISIONS.md #6, #65).
+      masked_reader_group: account users
 
   prod:
     mode: production

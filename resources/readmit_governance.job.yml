@@ -22,6 +22,7 @@ resources:
               - --warehouse-id=${resources.sql_warehouses.readmit_wh.id}
               - --pipeline-id=${resources.pipelines.readmit_pipeline.id}
               - --leadership-group=${var.leadership_group}
+              - --masked-reader-group=${var.masked_reader_group}
               - --go-live=${var.program_go_live}
               - --avg-cost=${var.avg_readmission_cost}
       environments:
