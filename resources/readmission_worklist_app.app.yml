@@ -4,6 +4,7 @@
 #   every worklist query is scoped to the signed-in user's facilities in care_team_roster_synced.
 # - Program tab and current settings read Unity Catalog through the warehouse on behalf of
 #   the signed-in user (user_api_scopes: sql), so UC grants and Phase 6 ABAC policies apply.
+# - The Program tab's Genie Agent also runs on behalf of the user (user_api_scopes: genie).
 # - App telemetry (OpenTelemetry, incl. audit.* log records) lands in readmission_worklist_app_bronze.
 
 resources:
@@ -14,6 +15,7 @@ resources:
       source_code_path: ../src/app
       user_api_scopes:
         - sql
+        - genie
       resources:
         - name: sql-warehouse
           sql_warehouse:
@@ -24,6 +26,11 @@ resources:
             branch: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}
             database: ${resources.postgres_projects.readmission_worklist.name}/branches/${var.lakebase_branch}/databases/${var.lakebase_database_id}
             permission: CAN_CONNECT_AND_CREATE
+        - name: genie-space
+          genie_space:
+            name: ${resources.genie_spaces.readmission_program.title}
+            space_id: ${resources.genie_spaces.readmission_program.id}
+            permission: CAN_RUN
       telemetry_export_destinations:
         - unity_catalog:
             logs_table: ${var.catalog}.${resources.schemas.readmission_worklist_app_bronze.name}.app_otel_logs
@@ -36,6 +43,8 @@ resources:
             value_from: sql-warehouse
           - name: LAKEBASE_ENDPOINT
             value_from: postgres
+          - name: DATABRICKS_GENIE_SPACE_ID
+            value_from: genie-space
           - name: READMIT_ENV
             value: ${var.env}
           - name: READMIT_CATALOG

@@ -1,0 +1,2 @@
+time,event_name,action,record_type,user_email
+2026-11-09T02:18:51.957Z,audit.genie.asked,new_conversation,genie_conversation,ryan.rabold@databricks.com

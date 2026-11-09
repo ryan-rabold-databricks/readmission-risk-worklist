@@ -78,6 +78,9 @@ measures:
     comment: Latest discharge date whose 30-day readmission label has matured.
   - name: latest_worklist_date
     expr: MIN(latest_worklist_date)
+  - name: data_through
+    expr: MAX(discharge_date)
+    comment: Latest discharge date in the data (within the current filter).
 
   # Volumes.
   - name: discharges

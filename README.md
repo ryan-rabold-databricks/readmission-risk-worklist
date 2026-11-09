@@ -163,11 +163,24 @@ databricks bundle run readmit_outreach_simulator -t dev --profile <profile>
 # 6. Run the daily cycle (ingest, score, build the worklist, publish it to Lakebase)
 databricks bundle run readmit_daily_cycle -t dev --profile <profile>
 
+# 6a. PHI governance and semantic layer: column tags, mask and facility filter functions,
+#     schema-level ABAC policies (only the pipeline identity is exempt), and the
+#     readmission_program_metrics metric view. Needs the silver and gold tables, so run it
+#     after the pipeline, and again after changing src/readmit/governance. Idempotent.
+#     Fails first if another project's policy or a class.* tag would collide (DECISIONS #60).
+databricks bundle run readmit_governance -t dev --profile <profile>
+
+# 6b. Fresh environment only: the Genie Agent resource references the metric view, so if the
+#     first deploy failed on it, deploy again now.
+databricks bundle deploy -t dev --profile <profile>
+
 # 7. Redeploy the app after app code changes
 databricks bundle run readmission_worklist_app -t dev --profile <profile>
 ```
 
-Program Settings is limited to the workspace group `care_mgmt_leadership`; add leaders to it (`databricks groups create --json '{"displayName": "care_mgmt_leadership"}'` in a new workspace). Care managers see the worklist for the facilities they are rostered at, which leadership sets in Program Settings.
+In a shared dev catalog, exclude the project schemas from catalog data classification auto-tagging (`databricks data-classification update-catalog-config catalogs/<catalog>/config excluded_schemas ...`): auto-applied `class.*` tags can be matched by other projects' catalog-level masks, and a masked pipeline identity writes masked data permanently (DECISIONS #60).
+
+Program Settings and the Genie Agent are limited to the workspace group `care_mgmt_leadership` (bundle variable `leadership_group`); add leaders to it (`databricks groups create --json '{"displayName": "care_mgmt_leadership"}'` in a new workspace). Care managers see the worklist for the facilities they are rostered at, which leadership sets in Program Settings.
 
 ## Repository structure
 
@@ -188,6 +201,8 @@ readmission-risk-worklist/
 │   ├── readmission_worklist_db.postgres_database.yml # Lakebase database readmission_worklist
 │   ├── *_synced.postgres_synced_table.yml  # care_worklist_synced, care_team_roster_synced
 │   ├── readmit_setup.job.yml               # app schema, CDF feed, app grants (idempotent)
+│   ├── readmit_governance.job.yml          # PHI tags, ABAC policies, metric view (idempotent)
+│   ├── readmission_program.genie_space.yml # Readmission Program Genie Agent
 │   ├── readmission_worklist_app.app.yml    # <env>-readmission-worklist: resources, user scopes, telemetry
 │   ├── readmit_outreach_simulator.job.yml  # demo only: outreach history through Lakebase
 │   ├── readmission_risk.registered_model.yml
@@ -199,10 +214,11 @@ readmission-risk-worklist/
 │   │   ├── ml/                 # Features, metrics, gates, model, drivers; train and score
 │   │   ├── worklist/           # Gold tables, capacity routing, briefs, build, program backfill
 │   │   ├── lakebase/           # Connection, app schema DDL, CDF feed, setup, publish, outreach simulator
+│   │   ├── governance/         # PHI tag map, ABAC policies, metric view YAML template, setup_governance
 │   │   └── simulator/          # Synthetic EHR extract generator (entry point: simulate)
 │   ├── pipeline/transformations/  # Lakeflow SDP sources, one file per dataset or entity
 │   └── app/                    # Databricks App (AppKit, Node/TypeScript/React)
-│       ├── server/             # Express routes (worklist, settings), identity, audit events, settings validation
+│       ├── server/             # Express routes (worklist, settings), audited Genie plugin, identity, audit events, settings validation
 │       ├── client/src/pages/   # WorklistPage, ProgramPage, SettingsPage
 │       ├── config/queries/     # *.obo.sql warehouse queries (run as the signed-in user)
 │       └── shared/appkit-types/  # Generated query types (npm run typegen), committed
@@ -268,15 +284,27 @@ Run evidence: [`evidence/phase4/`](evidence/phase4/). Decisions #40-#49.
 | Tab | Who | Reads | Writes |
 |---|---|---|---|
 | Worklist | Care manager | Lakebase `care_worklist_synced` joined to `care_team_roster_synced` for the user and day; status from `outreach_activity` | `readmission_worklist_app.outreach_activity` (idempotent on `client_request_id`) |
-| Program | Leadership / Quality | `readmission_outcome` through the warehouse, on behalf of the user: readmission rate vs prior year, reach rate, 7-day follow-up, estimated cost avoided, monthly trend, facility and tier tables | - |
+| Program | Leadership / Quality | Metric view `readmission_program_metrics` through the warehouse, on behalf of the user: readmission rate vs prior year, reach rate, 7-day follow-up, estimated cost avoided (two methods), monthly trend, facility table; tier table from `readmission_outcome`. Leaders also get the Readmission Program Genie Agent, on behalf of the user | - |
 | Program Settings | `care_mgmt_leadership` | Settings in effect (UC, on behalf of the user); change log (Lakebase) with the pipeline's result | `readmission_worklist_app.program_setting_change`: risk tier cut-offs and SLAs, care manager facilities and capacity, with effective date and reason |
 
-- **Two identities:** Lakebase access uses the app's service principal (append-only grants) with every worklist query filtered to the user's roster; warehouse queries are `*.obo.sql` and run as the user (`user_api_scopes: [sql]`), so the service principal has no Unity Catalog data grants.
+- **Two identities:** Lakebase access uses the app's service principal (append-only grants) with every worklist query filtered to the user's roster; warehouse queries are `*.obo.sql` and run as the user (`user_api_scopes: [sql, genie]`), so the service principal has no Unity Catalog data grants and the ABAC masks and facility filter apply to every Program answer, Genie included.
 - **Settings take effect on the next daily cycle:** the pipeline re-validates each change (the app checks the same rules first) and applies it from its effective date. No retroactive changes; released worklists are never rebuilt.
-- **Audit:** `worklist.viewed`, `outreach.logged`, `settings.changed` are OpenTelemetry log records (IDs only) exported by Databricks Apps telemetry to `readmission_worklist_app_bronze.app_otel_logs` and curated into `care_management_silver.app_audit_event`. `genie.asked` comes with Genie in Phase 6.
+- **Audit:** `worklist.viewed`, `outreach.logged`, `settings.changed` are OpenTelemetry log records (IDs only) exported by Databricks Apps telemetry to `readmission_worklist_app_bronze.app_otel_logs` and curated into `care_management_silver.app_audit_event`. `genie.asked` is emitted server-side for every Genie question, ahead of the Genie plugin's own route; the question text is never logged.
 - **Local development:** `cd src/app && npm install && npm run dev` with a `.env` from `.env.example` (`READMIT_DEV_USER_EMAIL` stands in for the signed-in user). Run `npm run typegen` after changing a query; the generated types are committed because the deployed build does not regenerate them.
 
 Run evidence: [`evidence/phase5/`](evidence/phase5/). Decisions #50-#57.
+
+## PHI governance, metric view, and Genie Agent
+
+| Asset | What it does |
+|---|---|
+| Column tags | Account-level governed tag `phi_data_classification` (HIPAA Safe Harbor categories: `name`, `mrn`, `phone_number`, `address`, `account_number`, `date`) on PHI columns in `ehr_bronze`, `clinical_silver`, and `readmission_worklist_gold.care_worklist`; `row_filter_policy = facility_id` on patient-level facts |
+| `phi_governance` functions | `mask_direct_identifier` (`***`), `mask_birth_date` (January 1 of the birth year; NULL past age 89), `filter_by_facility` (leadership sees all; others see facilities assigned to them today) |
+| ABAC policies | `readmit_mask_direct_identifier`, `readmit_mask_birth_date`, `readmit_filter_by_facility` on `ehr_bronze`, `clinical_silver`, `care_management_silver`, `readmission_worklist_gold`, to `account users` except the pipeline identity (it must read unmasked data, or refreshes write masked values) |
+| Metric view | `readmission_worklist_gold.readmission_program_metrics`: the one definition of the Program KPIs, both cost-avoided methods included, for the app and Genie |
+| Genie Agent | `Readmission Program (<env>)`, bundle resource over the metric view, `readmission_outcome`, `care_worklist` (names, phones, briefs excluded from Genie's context), and `facility`; CAN_RUN for `care_mgmt_leadership` |
+
+Run evidence: [`evidence/phase6/`](evidence/phase6/). Decisions #60-#63.
 
 ## Synthetic EHR source simulator
 
@@ -324,6 +352,7 @@ Bundle variables in `databricks.yml`:
 | `warehouse_max_clusters` | Scale-out limit for `<env>_readmit_wh` (bundle-managed) | `1` (dev), `2` (prod) |
 | `program_go_live` | First worklist day of the program; backfill start | `2026-05-01` |
 | `brief_days` | Outreach briefs are drafted for the latest N worklist days | `14` |
+| `leadership_group` | Workspace group for Care Management Leadership (Program Settings, Genie, all facilities under the row filter) | `care_mgmt_leadership` |
 | `avg_readmission_cost` | Assumed cost of one readmission (USD) for estimated cost avoided. The default is a rough estimate based on [AHRQ HCUP Statistical Brief #248](https://hcup-us.ahrq.gov/reports/statbriefs/sb248-Hospital-Readmissions-2010-2016.jsp) ($14,400 average 30-day readmission cost in 2016, hospital cost, all payers); **set the customer's own cost when deploying** | `15000` |
 | `service_principal_id` | Service principal that runs prod workloads (`run_as`) | application ID |
 

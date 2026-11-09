@@ -1,6 +1,8 @@
-// Program tab: is outreach moving readmissions? Reads readmission_worklist_gold.readmission_outcome
-// through the SQL warehouse on behalf of the signed-in user (*.obo.sql), so UC grants and
-// policies apply. Genie joins this tab in Phase 6.
+// Program tab: is outreach moving readmissions? KPIs, facility table, and trend read the
+// governed metric view readmission_worklist_gold.readmission_program_metrics (DECISIONS.md #61)
+// through the SQL warehouse on behalf of the signed-in user (*.obo.sql), so UC grants and the
+// ABAC facility filter apply. Leaders also get the Readmission Program Genie Agent (#63), which
+// answers from the same metric view.
 
 import {
   Card,
@@ -8,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  GenieChat,
   LineChart,
   Table,
   TableBody,
@@ -50,12 +53,11 @@ function Kpi({ title, value, detail }: { title: string; value: string; detail: R
 }
 
 export function ProgramPage({ me }: { me: Me }) {
-  const base = useMemo(() => ({ catalog: sql.string(me.catalog), go_live: sql.date(me.programGoLive) }), [me]);
-  const kpiParams = useMemo(() => ({ ...base, avg_cost: sql.double(me.avgReadmissionCost) }), [base, me]);
-  const tierParams = useMemo(() => ({ catalog: sql.string(me.catalog) }), [me]);
-  const kpis = coerce(ProgramKpis, useAnalyticsQuery('program_kpis', kpiParams));
-  const facilities = coerce(FacilityRow, useAnalyticsQuery('program_by_facility', base));
-  const tiers = coerce(TierEffectRow, useAnalyticsQuery('program_effect_by_tier', tierParams));
+  const catalogParams = useMemo(() => ({ catalog: sql.string(me.catalog) }), [me]);
+  const base = useMemo(() => ({ ...catalogParams, go_live: sql.date(me.programGoLive) }), [catalogParams, me]);
+  const kpis = coerce(ProgramKpis, useAnalyticsQuery('program_kpis', catalogParams));
+  const facilities = coerce(FacilityRow, useAnalyticsQuery('program_by_facility', catalogParams));
+  const tiers = coerce(TierEffectRow, useAnalyticsQuery('program_effect_by_tier', catalogParams));
   const k = kpis.rows?.[0];
 
   return (
@@ -67,7 +69,8 @@ export function ProgramPage({ me }: { me: Me }) {
           <p className="text-sm text-muted-foreground">
             Program period: discharges from {k.program_start} (go-live {me.programGoLive}). Readmission rates use discharges whose
             30-day window has closed (through {k.matured_through}); baseline is the same span one year earlier. Data through{' '}
-            {k.data_through}. Source: readmission_worklist_gold.readmission_outcome, refreshed by the daily cycle.
+            {k.data_through}. Source: metric view readmission_worklist_gold.readmission_program_metrics (the same definitions Genie
+            uses), refreshed by the daily cycle.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <Kpi
@@ -196,6 +199,23 @@ export function ProgramPage({ me }: { me: Me }) {
           </CardContent>
         </Card>
       </div>
+
+      {me.isLeader && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ask about the program</CardTitle>
+            <CardDescription>
+              Readmission Program Genie Agent. Answers use the same metric definitions as this tab and run as you, so your data access
+              applies. Estimates are not causal measures; check the generated SQL under each answer.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div style={{ height: 560 }}>
+              <GenieChat alias="default" placeholder="e.g. Which facility has the highest readmission rate compared with last year?" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

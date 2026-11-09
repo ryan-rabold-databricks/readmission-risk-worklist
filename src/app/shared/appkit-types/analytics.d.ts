@@ -25,8 +25,6 @@ declare module "@databricks/appkit-ui/react" {
         parameters: {
           /** STRING - use sql.string() */
           catalog: SQLStringMarker;
-          /** DATE - use sql.date() */
-          go_live: SQLDateMarker;
         };
         result: Array<{
           /** @sqlType STRING */
@@ -41,7 +39,7 @@ declare module "@databricks/appkit-ui/react" {
           baseline_readmit_rate: number;
           /** @sqlType DOUBLE */
           program_followup_7d_rate: number;
-          /** @sqlType DOUBLE */
+          /** Share of ASSIGNED worklist items whose patient was spoken to (REACHED, FOLLOWUP_BOOKED, DECLINED); excludes the latest worklist day, which is still being worked. */
           reach_rate: number;
           /** @sqlType BIGINT */
           overflow_items: number;
@@ -73,17 +71,13 @@ declare module "@databricks/appkit-ui/react" {
         parameters: {
           /** STRING - use sql.string() */
           catalog: SQLStringMarker;
-          /** DATE - use sql.date() */
-          go_live: SQLDateMarker;
-          /** DOUBLE - use sql.double() */
-          avg_cost: SQLNumberMarker;
         };
         result: Array<{
           /** @sqlType DATE */
           program_start: string;
-          /** @sqlType DATE */
+          /** Latest discharge date whose 30-day readmission label has matured. */
           matured_through: string;
-          /** @sqlType DATE */
+          /** Latest discharge date in the data (within the current filter). */
           data_through: string;
           /** @sqlType DATE */
           latest_worklist_date: string;
@@ -97,33 +91,33 @@ declare module "@databricks/appkit-ui/react" {
           program_followup_7d_rate: number;
           /** @sqlType DOUBLE */
           baseline_followup_7d_rate: number;
-          /** @sqlType DOUBLE */
+          /** Share of ASSIGNED worklist items whose patient was spoken to (REACHED, FOLLOWUP_BOOKED, DECLINED); excludes the latest worklist day, which is still being worked. */
           reach_rate: number;
           /** @sqlType BIGINT */
           worklist_items: number;
           /** @sqlType BIGINT */
           overflow_items: number;
-          /** @sqlType DOUBLE */
+          /** Median hours from worklist release to first contact, reached items only. */
           median_first_contact_hours: number;
-          /** @sqlType DOUBLE */
+          /** Estimate (headline): per risk tier, readmission rate of assigned-but-not-reached minus reached items (floored at 0) times reached items, matured program items only. Reached patients may differ in ways the model does not see; not a causal measure. */
           readmissions_avoided: number;
-          /** @sqlType DOUBLE */
+          /** Estimated cost avoided (headline, within-tier method) at the assumed cost per readmission. */
           est_cost_avoided: number;
           /** @sqlType BIGINT */
           matured_program_discharges: number;
-          /** @sqlType DOUBLE */
+          /** Estimate (cross-check) from the year-over-year change in readmission rate. */
           readmissions_avoided_yoy: number;
-          /** @sqlType DOUBLE */
+          /** Estimated cost avoided (cross-check, prior-year method) at the assumed cost per readmission. */
           est_cost_avoided_yoy: number;
         }>;
       };
     program_monthly: {
         name: "program_monthly";
         parameters: {
-          /** STRING - use sql.string() */
-          catalog: SQLStringMarker;
           /** DATE - use sql.date() */
           go_live: SQLDateMarker;
+          /** STRING - use sql.string() */
+          catalog: SQLStringMarker;
         };
         result: Array<{
           /** @sqlType STRING */
@@ -132,9 +126,9 @@ declare module "@databricks/appkit-ui/react" {
           in_program: boolean;
           /** @sqlType BIGINT */
           discharges: number;
-          /** @sqlType DOUBLE */
+          /** 30-day readmission rate on matured labels only. */
           readmit_rate: number;
-          /** @sqlType DOUBLE */
+          /** Share of discharges with a follow-up visit attended within 7 days; through matured_through so both periods cover closed windows. */
           followup_7d_rate: number;
         }>;
       };

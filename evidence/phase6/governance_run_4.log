@@ -1,0 +1,15 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/811803537423383/runs/447824254340094?o=7474647046080636
+
+2026-11-08 21:16:16 "dev_readmit_governance" RUNNING
+2026-11-08 21:17:06 "dev_readmit_governance" TERMINATED SUCCESS
+{
+  "exempt_principal": "ryan.rabold@databricks.com",
+  "column_tags": {
+    "created": 0,
+    "updated": 0,
+    "unchanged": 25
+  },
+  "functions": 3,
+  "policies": 12,
+  "metric_view": "rtr_demo_catalog.readmission_worklist_gold.readmission_program_metrics"
+}
