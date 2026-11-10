@@ -33,7 +33,7 @@ CHECKS = {
     "hidden_materialization": f"SELECT first_name FROM {CAT}.clinical_silver.__materialization_mat_681e67de_8388_473c_95d2_56d9e3aa606f_patient_1 LIMIT 1",
     "app_bronze_outreach": f"SELECT count(*) AS n FROM {CAT}.readmission_worklist_app_bronze.lb_outreach_activity_history",
 }
-LEADER_CHECKS = ["identity", "silver_patient", "readmission_outcome", "metric_view", "care_worklist"]
+LEADER_CHECKS = ["identity", "silver_patient", "readmission_outcome", "metric_view", "care_worklist", "synced_foreign_table"]
 
 
 def q(w: WorkspaceClient, sql: str):

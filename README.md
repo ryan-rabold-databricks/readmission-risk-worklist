@@ -135,7 +135,8 @@ databricks bundle deploy   -t dev --profile <profile>
 databricks bundle run readmit_setup -t dev --profile <profile>
 
 # 3a. App grants: deploying the bundle created the app and its service principal. Grant it
-#     Postgres access (synced schema SELECT, app schema SELECT/INSERT) and the UC grants
+#     Postgres access (synced schema SELECT, app schema SELECT/INSERT; the daily cycle's
+#     publish_worklist re-applies the synced-schema grants after each sync, DECISIONS #68) and the UC grants
 #     app telemetry needs, then start the app (this also creates the app_otel_* tables
 #     the pipeline's app_audit_event reads).
 APP_SP=$(databricks apps get <env>-readmission-worklist --profile <profile> -o json | jq -r .service_principal_client_id)
@@ -177,6 +178,23 @@ databricks bundle deploy -t dev --profile <profile>
 # 7. Redeploy the app after app code changes
 databricks bundle run readmission_worklist_app -t dev --profile <profile>
 ```
+
+### Production: deploy as the service principal
+
+The prod target sets `run_as` to the service principal in `service_principal_id`. The bundle allows a deployer different from `run_as` only for jobs and pipelines, not for apps, Lakebase, or the Genie Agent, so **prod is deployed by that service principal itself** (normally from CI); a person deploying `-t prod` gets "apps do not support a setting a run_as user that is different from the owner" (DECISIONS #67).
+
+```bash
+# Service principal OAuth (M2M) credentials, e.g. from the CI secret store
+export DATABRICKS_HOST=https://<prod-workspace>
+export DATABRICKS_CLIENT_ID=<service principal application ID>
+export DATABRICKS_CLIENT_SECRET=<OAuth secret>
+
+databricks bundle validate -t prod --var service_principal_id=$DATABRICKS_CLIENT_ID
+databricks bundle deploy   -t prod --var service_principal_id=$DATABRICKS_CLIENT_ID
+# then steps 3-6b with -t prod (no --profile)
+```
+
+Before the first prod deploy: give the service principal the catalog privileges listed under Prerequisites on `prod_care_management`, set `lakebase_owner_role` to its Lakebase role, create `care_mgmt_leadership` as an **account** group assigned to the workspace, and have the catalog owner grant that group USE CATALOG (the governance job grants schema and table access, DECISIONS #65).
 
 In a shared dev catalog, turn off catalog data classification auto-tagging (dev: off for all of `rtr_demo_catalog`, DECISIONS #64) or exclude the project schemas from it (`databricks data-classification update-catalog-config catalogs/<catalog>/config excluded_schemas ...`): auto-applied `class.*` tags can be matched by other projects' catalog-level masks, and a masked pipeline identity writes masked data permanently (DECISIONS #60).
 

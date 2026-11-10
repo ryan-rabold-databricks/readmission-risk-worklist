@@ -58,13 +58,27 @@ WHERE n.nspname = %s AND c.relkind = 'r'
 ORDER BY c.relname"""
 
 
-def grant_statements(app_role: str) -> list[str]:
-    """Least privilege for the app's service principal: read the synced gold tables,
-    insert into (never update or delete) its own append-only tables."""
-    r = '"' + app_role.replace('"', '""') + '"'
+def _role(app_role: str) -> str:
+    return '"' + app_role.replace('"', '""') + '"'
+
+
+def synced_read_grants(app_role: str) -> list[str]:
+    """Read on the synced gold tables. Default privileges cannot cover them (they are
+    created by the system role databricks_writer_<db oid>, DECISIONS.md #68), so
+    publish_worklist re-applies these after every sync."""
+    r = _role(app_role)
     return [
         f"GRANT USAGE ON SCHEMA {SYNCED_SCHEMA} TO {r}",
         f"GRANT SELECT ON ALL TABLES IN SCHEMA {SYNCED_SCHEMA} TO {r}",
+    ]
+
+
+def grant_statements(app_role: str) -> list[str]:
+    """Least privilege for the app's service principal: read the synced gold tables,
+    insert into (never update or delete) its own append-only tables."""
+    r = _role(app_role)
+    return [
+        *synced_read_grants(app_role),
         f"GRANT USAGE ON SCHEMA {APP_SCHEMA} TO {r}",
         f"GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA {APP_SCHEMA} TO {r}",
         f"ALTER DEFAULT PRIVILEGES IN SCHEMA {APP_SCHEMA} GRANT SELECT, INSERT ON TABLES TO {r}",

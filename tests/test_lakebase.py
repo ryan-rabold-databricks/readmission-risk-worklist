@@ -82,3 +82,11 @@ def test_active_views_carry_only_care_manager_columns():
     assert not any(c.startswith("audit_") for c in CARE_WORKLIST_ACTIVE_COLUMNS)
     ddl = _view_ddl("cat", 30)["care_worklist_active"]
     assert "INTERVAL 30 DAYS" in ddl and "max(worklist_date)" in ddl
+
+
+def test_setup_grants_include_the_synced_read_grants_publish_reapplies():
+    from readmit.lakebase.app_schema import grant_statements, synced_read_grants
+    synced = synced_read_grants('sp"x')
+    assert synced == ['GRANT USAGE ON SCHEMA readmission_worklist_gold TO "sp""x"',
+                      'GRANT SELECT ON ALL TABLES IN SCHEMA readmission_worklist_gold TO "sp""x"']
+    assert grant_statements('sp"x')[:2] == synced

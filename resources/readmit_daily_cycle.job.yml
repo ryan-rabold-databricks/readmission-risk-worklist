@@ -64,6 +64,7 @@ resources:
               - --lakebase-project=${var.lakebase_project}
               - --lakebase-branch=${var.lakebase_branch}
               - --lakebase-database=${var.lakebase_database}
+              - --app-role=${resources.apps.readmission_worklist_app.service_principal_client_id}
       environments:
         - environment_key: lakebase
           spec:

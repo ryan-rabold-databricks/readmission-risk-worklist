@@ -4,7 +4,8 @@ Synced tables are SNAPSHOT copies of the *_active views (minimum necessary, late
 30 worklist days; DECISIONS.md #46), refreshed once per daily cycle after
 build_worklist has written the whole day. Each sync is an update of the synced
 table's managed pipeline. The task then checks that Postgres holds exactly the rows
-the view holds, in total and for the published day.
+the view holds, in total and for the published day, and re-applies the app's read
+grants on the synced schema (a recreated synced table has none, DECISIONS.md #68).
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from databricks.sdk import WorkspaceClient
 from readmit.common.dates import parse_or_today
 from readmit.common.env_guardrail import assert_environment
 from readmit.common.spark import get_spark
-from readmit.lakebase.app_schema import SYNCED_SCHEMA
+from readmit.lakebase.app_schema import SYNCED_SCHEMA, synced_read_grants
 from readmit.lakebase.connect import LakebaseTarget, connect
 
 # Synced table -> (source table, date column used for the row-count check).
@@ -70,6 +71,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--lakebase-project", required=True)
     p.add_argument("--lakebase-branch", required=True)
     p.add_argument("--lakebase-database", required=True)
+    p.add_argument("--app-role", required=True, help="App service principal client ID (its Postgres role)")
     return p.parse_args(argv)
 
 
@@ -94,6 +96,17 @@ def main(argv: list[str] | None = None) -> None:
         if (uc["total"], uc["day"]) != (pg_total, pg_day):
             raise RuntimeError(f"{synced}: Postgres {pg_total}/{pg_day} rows (total/{run_date}) "
                                f"!= UC {uc['total']}/{uc['day']}: {summary}")
+    with connect(w, target) as conn, conn.cursor() as cur:
+        for stmt in synced_read_grants(args.app_role):
+            cur.execute(stmt)
+        conn.commit()
+        cur.execute(f"SELECT count(*) FILTER (WHERE NOT has_table_privilege(%s, c.oid, 'SELECT')) "
+                    f"FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                    f"WHERE n.nspname = %s AND c.relkind = 'r'", (args.app_role, SYNCED_SCHEMA))
+        missing = cur.fetchone()[0]
+    if missing:
+        raise RuntimeError(f"App role {args.app_role} still lacks SELECT on {missing} tables in {SYNCED_SCHEMA}")
+    summary["app_read_grants"] = {"role": args.app_role, "tables_missing_select": 0}
     print(json.dumps(summary, indent=2))
 
 

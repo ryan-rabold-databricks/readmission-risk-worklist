@@ -1,0 +1,39 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/773178160265376/runs/912527346077950?o=7474647046080636
+
+2026-11-09 20:02:12 "dev_readmit_daily_cycle" RUNNING
+2026-11-09 20:04:27 "dev_readmit_daily_cycle" TERMINATED SUCCESS
+{
+  "run_date": "2026-11-10",
+  "tables": {
+    "care_worklist_synced": {
+      "pipeline_id": "79bc3344-3bf2-41d7-85c0-9b6215af1a2e",
+      "update_id": "9ab1f62c-89b7-464a-844d-6b78c004b8ad",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 1465,
+        "day": 0
+      },
+      "pg_rows": {
+        "total": 1465,
+        "day": 0
+      }
+    },
+    "care_team_roster_synced": {
+      "pipeline_id": "2051653d-2e68-439e-95ae-74fcd727038d",
+      "update_id": "cea0755a-c1c7-477a-b29f-f71183ea78ce",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 150,
+        "day": 0
+      },
+      "pg_rows": {
+        "total": 150,
+        "day": 0
+      }
+    }
+  },
+  "app_read_grants": {
+    "role": "c21146c6-b973-4b42-a0cb-6cc41e5e777c",
+    "tables_missing_select": 0
+  }
+}
