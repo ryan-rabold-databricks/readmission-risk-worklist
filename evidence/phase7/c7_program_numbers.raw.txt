@@ -1,0 +1,111 @@
+# C7: Program tab numbers today, from the app's own *.obo.sql queries (parameters bound to the dev defaults:
+# catalog = rtr_demo_catalog, go_live = 2026-05-01). Data unchanged since worklist day 2026-11-06 (D1 not run),
+# so these should equal evidence/phase6/metric_view_headline.txt and app_validation.md. Run as the author (exempt).
+# Run 2026-11-10T14:20:33Z as ryan.rabold@databricks.com, profile fevm-classic-stable, warehouse b2f6ee775c2fa42c
+
+### program_kpis.obo.sql
+SELECT
+  MEASURE(program_start) AS program_start,
+  MEASURE(matured_through) AS matured_through,
+  MEASURE(data_through) AS data_through,
+  MEASURE(latest_worklist_date) AS latest_worklist_date,
+  MEASURE(program_discharges) AS program_discharges,
+  MEASURE(program_readmission_rate) AS program_readmit_rate,
+  MEASURE(baseline_readmission_rate) AS baseline_readmit_rate,
+  MEASURE(program_followup_7d_rate) AS program_followup_7d_rate,
+  MEASURE(baseline_followup_7d_rate) AS baseline_followup_7d_rate,
+  MEASURE(reach_rate) AS reach_rate,
+  MEASURE(worklist_items) AS worklist_items,
+  MEASURE(overflow_items) AS overflow_items,
+  MEASURE(median_first_contact_hours) AS median_first_contact_hours,
+  MEASURE(readmissions_avoided) AS readmissions_avoided,
+  MEASURE(est_cost_avoided) AS est_cost_avoided,
+  MEASURE(matured_program_discharges) AS matured_program_discharges,
+  MEASURE(readmissions_avoided_vs_prior_year) AS readmissions_avoided_yoy,
+  MEASURE(est_cost_avoided_vs_prior_year) AS est_cost_avoided_yoy
+FROM rtr_demo_catalog.readmission_worklist_gold.readmission_program_metrics
+SUCCEEDED
+program_start,matured_through,data_through,latest_worklist_date,program_discharges,program_readmit_rate,baseline_readmit_rate,program_followup_7d_rate,baseline_followup_7d_rate,reach_rate,worklist_items,overflow_items,median_first_contact_hours,readmissions_avoided,est_cost_avoided,matured_program_discharges,readmissions_avoided_yoy,est_cost_avoided_yoy
+2026-04-30,2026-10-06,2026-11-05,2026-11-06,28094,0.14361679499723487,0.14986018134056436,0.5081890500701919,0.46915515634268284,0.6432124226616523,8640,358,22.18,176.08029618053615,2641204.4427080425,23507,146.7632827726464,2201449.2415896957
+
+### program_by_facility.obo.sql
+SELECT
+  facility_id,
+  facility_name,
+  MEASURE(program_discharges) AS program_discharges,
+  MEASURE(program_readmission_rate) AS program_readmit_rate,
+  MEASURE(baseline_readmission_rate) AS baseline_readmit_rate,
+  MEASURE(program_followup_7d_rate) AS program_followup_7d_rate,
+  MEASURE(reach_rate) AS reach_rate,
+  MEASURE(overflow_items) AS overflow_items
+FROM rtr_demo_catalog.readmission_worklist_gold.readmission_program_metrics
+WHERE period IS NOT NULL
+GROUP BY facility_id, facility_name
+ORDER BY program_readmit_rate DESC
+SUCCEEDED
+facility_id,facility_name,program_discharges,program_readmit_rate,baseline_readmit_rate,program_followup_7d_rate,reach_rate,overflow_items
+FAC-RCH,Riverbend Community Hospital,2965,0.19447827852212748,0.20473705339221196,0.31384490458790093,0.6264550264550265,41
+FAC-CCH,Cedar Creek Community Hospital,3387,0.1420434318262727,0.15181975736568457,0.512993948024208,0.6415458937198067,40
+FAC-SVH,Southview Hospital,5732,0.13992537313432835,0.15150232754972492,0.4987562189054726,0.6484098939929329,70
+FAC-NGR,Northgate Regional Hospital,6643,0.13875426314844733,0.14091650063394312,0.5307844193143062,0.6333514394350896,79
+FAC-LMC,Lakeside Medical Center,9367,0.13392857142857142,0.13723524251159294,0.5572704081632653,0.6530837004405287,128
+
+### program_effect_by_tier.obo.sql
+SELECT
+  risk_tier,
+  CASE WHEN assignment_status = 'OVERFLOW' THEN 'Overflow (not worked)'
+       WHEN was_reached THEN 'Reached'
+       ELSE 'Assigned, not reached' END AS outreach_group,
+  count(*) AS items,
+  avg(cast(readmitted_30d AS INT)) AS readmit_rate,
+  avg(cast(followup_completed_7d AS INT)) AS followup_7d_rate,
+  avg(risk_score) AS mean_predicted_risk
+FROM rtr_demo_catalog.readmission_worklist_gold.readmission_outcome
+WHERE was_on_worklist AND readmitted_30d IS NOT NULL
+GROUP BY ALL
+ORDER BY risk_tier, outreach_group
+SUCCEEDED
+risk_tier,outreach_group,items,readmit_rate,followup_7d_rate,mean_predicted_risk
+HIGH,"Assigned, not reached",1311,0.38749046529366893,0.36689549961861173,0.3932994237662635
+HIGH,Reached,2770,0.35090252707581226,0.535740072202166,0.39422837696996404
+MEDIUM,"Assigned, not reached",1148,0.22996515679442509,0.4529616724738676,0.24081045412539606
+MEDIUM,Overflow (not worked),273,0.1794871794871795,0.4652014652014652,0.1995432938520725
+MEDIUM,Reached,1673,0.1852958756724447,0.616258218768679,0.2395504332825016
+
+### program_monthly.obo.sql
+SELECT
+  date_format(discharge_month, 'yyyy-MM') AS month,
+  discharge_month >= date_trunc('MONTH', DATE'2026-05-01') AS in_program,
+  MEASURE(discharges) AS discharges,
+  MEASURE(readmission_rate) AS readmit_rate,
+  MEASURE(followup_7d_rate) AS followup_7d_rate
+FROM rtr_demo_catalog.readmission_worklist_gold.readmission_program_metrics
+WHERE month_fully_matured
+GROUP BY discharge_month
+ORDER BY discharge_month
+SUCCEEDED
+month,in_program,discharges,readmit_rate,followup_7d_rate
+2024-11,false,4317,0.15126245077600187,0.47810979847116053
+2024-12,false,5217,0.16714586927352884,0.4809277362468852
+2025-01,false,5388,0.1583147735708983,0.47438752783964366
+2025-02,false,4900,0.15959183673469388,0.47081632653061223
+2025-03,false,4736,0.15498310810810811,0.46980574324324326
+2025-04,false,4545,0.15577557755775578,0.46578657865786577
+2025-05,false,4780,0.1489539748953975,0.4698744769874477
+2025-06,false,4269,0.14898102600140548,0.4631061138439916
+2025-07,false,4449,0.14767363452461227,0.4670712519667341
+2025-08,false,4399,0.1527619913616731,0.4744260059104342
+2025-09,false,4615,0.15059588299024917,0.4745395449620802
+2025-10,false,4743,0.15264600463841452,0.47058823529411764
+2025-11,false,4539,0.16325181758096496,0.4606741573033708
+2025-12,false,5371,0.17408303854030907,0.4732824427480916
+2026-01,false,5277,0.15956035626302822,0.46465794959257156
+2026-02,false,4851,0.16223459080601937,0.47577819006390437
+2026-03,false,4809,0.15762112705344147,0.4693283426907881
+2026-04,false,4593,0.14805138253864578,0.4879163945133899
+2026-05,true,4670,0.13940042826552462,0.5160599571734475
+2026-06,true,4387,0.14315021654889445,0.5051287896056531
+2026-07,true,4416,0.13949275362318841,0.5097373188405797
+2026-08,true,4348,0.15110395584176634,0.5057497700091996
+2026-09,true,4567,0.14363915042697614,0.5025180643748631
+

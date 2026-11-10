@@ -1,0 +1,47 @@
+# C9: bundle validate and plan against the deployed dev target, run 2026-11-10T14:22:48Z at commit 4027ea9; CLI Databricks CLI v1.19.0
+
+$ databricks bundle validate -t dev --profile fevm-classic-stable
+Name: readmission_worklist
+Target: dev
+Workspace:
+  Host: https://fevm-classic-stable-v61z4f.cloud.databricks.com
+  User: ryan.rabold@databricks.com
+  Path: /Workspace/Users/ryan.rabold@databricks.com/.bundle/readmission_worklist/dev
+
+Validation OK!
+(exit 0)
+
+$ databricks bundle plan -t dev --profile fevm-classic-stable
+Building readmit_wheel...
+update apps.readmission_worklist_app
+update genie_spaces.readmission_program.permissions
+update jobs.readmit_daily_cycle
+update jobs.readmit_governance
+update jobs.readmit_model_training
+update jobs.readmit_outreach_simulator
+update jobs.readmit_program_backfill
+update jobs.readmit_setup
+update jobs.readmit_source_simulator
+
+Plan: 0 to add, 9 to change, 0 to delete, 18 unchanged
+(exit 0)
+
+echo
+
+echo '$ databricks bundle plan -t dev --profile fevm-classic-stable -o json | jq (excerpt: what changes on the app and the Genie space, value fields truncated to 160 chars)'
+
+jq -c '.plan | to_entries[] | select(.key|test("apps\\.|genie_spaces")) | {key, action: .value.action, changes: (.value.changes // {} | with_entries(select(.value.action != "skip" or (.key|test("serialized_space")))) | with_entries(.value |= {action, old: (.old|tostring|.[0:160]), new: (.new|tostring|.[0:160]), remote: (.remote|tostring|.[0:160])}))}' /tmp/plan.json
+
+echo
+
+echo '$ jobs: every job "update" is the per-deploy wheel path (dynamic_version, DECISIONS #28), e.g. readmit_setup:'
+
+jq -c '.plan["resources.jobs.readmit_setup"].changes | with_entries(select(.value.action=="update"))' /tmp/plan.json
+
+$ databricks bundle plan -t dev --profile fevm-classic-stable -o json | jq (excerpt: what changes on the app and the Genie space, value fields truncated to 160 chars)
+{"key":"resources.apps.readmission_worklist_app","action":"update","changes":{"config.env[0].value_from":{"action":"update","old":"sql-warehouse","new":"sql-warehouse","remote":"null"},"config.env[1].value_from":{"action":"update","old":"postgres","new":"postgres","remote":"null"},"config.env[2].value_from":{"action":"update","old":"genie-space","new":"genie-space","remote":"null"},"config.env[3].value":{"action":"update","old":"dev","new":"dev","remote":"null"},"config.env[4].value":{"action":"update","old":"rtr_demo_catalog","new":"rtr_demo_catalog","remote":"null"},"config.env[5].value":{"action":"update","old":"2026-05-01","new":"2026-05-01","remote":"null"},"config.env[6].value":{"action":"update","old":"15000","new":"15000","remote":"null"},"config.env[7].value":{"action":"update","old":"care_mgmt_leadership","new":"care_mgmt_leadership","remote":"null"},"config.env[8].value":{"action":"update","old":"always_on","new":"always_on","remote":"null"}}}
+{"key":"resources.genie_spaces.readmission_program","action":"skip","changes":{"serialized_space":{"action":"skip","old":"sha256:7cf2609b706ad30aa185dcd904253d0cc13c13b9b739efe407c6acea82f8cb09","new":"sha256:7cf2609b706ad30aa185dcd904253d0cc13c13b9b739efe407c6acea82f8cb09","remote":"sha256:3916fc6a22e983a57f82df8abc78d676cb83935f145083b3588bb88ad96dc71a"}}}
+{"key":"resources.genie_spaces.readmission_program.permissions","action":"update","changes":{"[service_principal_name='c21146c6-b973-4b42-a0cb-6cc41e5e777c']":{"action":"update","old":"null","new":"null","remote":"{\"level\":\"CAN_RUN\",\"service_principal_name\":\"c21146c6-b973-4b42-a0cb-6cc41e5e777c\"}"}}}
+
+$ jobs: every job "update" is the per-deploy wheel path (dynamic_version, DECISIONS #28), e.g. readmit_setup:
+{"environments[environment_key='lakebase'].spec.dependencies[0]":{"action":"update","old":"/Workspace/Users/ryan.rabold@databricks.com/.bundle/readmission_worklist/dev/artifacts/.internal/readmit-0.1.0+1794272495691111109-py3-none-any.whl","new":"/Workspace/Users/ryan.rabold@databricks.com/.bundle/readmission_worklist/dev/artifacts/.internal/readmit-0.1.0+1794320586432364528-py3-none-any.whl","remote":"/Workspace/Users/ryan.rabold@databricks.com/.bundle/readmission_worklist/dev/artifacts/.internal/readmit-0.1.0+1794272495691111109-py3-none-any.whl"}}

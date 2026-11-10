@@ -2,7 +2,7 @@
 
 A reference solution on Databricks that helps a hospital care management team cut avoidable 30-day readmissions. Every morning it scores yesterday's discharges for readmission risk, routes high-risk patients to the right care manager with a plain-language outreach brief, captures each outreach call, and measures whether the program is actually moving readmission rates.
 
-> **Status:** Phase 5 of 7 complete (bundle, synthetic EHR source simulator, Lakeflow SDP pipeline, readmission model with champion/challenger gates, daily scoring and capacity-capped worklist with `ai_query` briefs, program history from 2026-05-01, Lakebase synced worklist and CDF write-back, simulated outreach history, AppKit app with Worklist / Program / Program Settings tabs, Program Settings applied by the pipeline, `readmission_outcome`, app telemetry and audit events). Genie, the metric view, and ABAC policies are Phase 6. The high-level design is in [`docs/`](docs/). Sections marked *(planned)* describe the target state.
+> **Status:** Phase 6 of 7 complete (bundle, synthetic EHR source simulator, Lakeflow SDP pipeline, readmission model with champion/challenger gates, daily scoring and capacity-capped worklist with `ai_query` briefs, program history from 2026-05-01, Lakebase synced worklist and CDF write-back, simulated outreach history, AppKit app with Worklist / Program / Program Settings tabs, Program Settings applied by the pipeline, `readmission_outcome`, app telemetry and audit events, PHI tags and ABAC policies, the `readmission_program_metrics` metric view, and the Readmission Program Genie Agent). Phase 7 is the evidence pass, deck, and roleplay prep. The high-level design (v0.4) is in [`docs/`](docs/); where the build differs from it, see [As built vs design v0.4](#as-built-vs-design-v04). Run evidence is indexed in [`evidence/README.md`](evidence/README.md).
 >
 > All data is **synthetic**. No real patient or customer data is used anywhere in this repository.
 
@@ -82,8 +82,8 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 
 ### Governance
 
-- Every PHI column carries a governed tag `phi = direct_identifier | quasi_identifier`.
-- Tag-driven ABAC policies on the silver and gold schemas mask direct identifiers and filter rows by facility for every SQL, notebook, and Genie read.
+- Every PHI column carries the account-level governed tag `phi_data_classification` (HIPAA Safe Harbor categories such as `name`, `mrn`, `phone_number`, `date`); patient-level facts carry `row_filter_policy = facility_id`. The design's `phi = direct_identifier | quasi_identifier` tag was already taken by another owner (DECISIONS #62).
+- Tag-driven ABAC policies on `ehr_bronze`, `clinical_silver`, `care_management_silver`, and `readmission_worklist_gold` mask direct identifiers and filter rows by facility for every SQL, notebook, and Genie read by account users; only the pipeline's run-as identity is exempt (DECISIONS #62). Bronze is in scope because dev grants account users catalog-wide SELECT (#6).
 - The `readmission_worklist_app_bronze` schema (Lakebase CDF destination) is excluded from masks and filters because CDF destinations must not carry them; access is restricted to the pipeline identity instead.
 - Unity Catalog row filters do not apply inside Lakebase Postgres, so the app scopes every query to the signed-in user's facility assignments. Only the minimum columns a care manager needs are synced to Lakebase.
 - The Program Settings tab is limited to the `care_mgmt_leadership` group; every change is an append-only row with who, when, and why.
@@ -103,6 +103,25 @@ Names line up at the **schema** level because that is where Lakebase maps them: 
 | AppKit (Node/TypeScript/React) for the app | Databricks default and template-aligned | Team must be comfortable with TypeScript |
 | Separate Lakebase schemas, one database | Postgres cannot join across databases; the app joins the synced worklist with its own writes | Schema-level ownership must be managed carefully |
 | XGBoost on LACE-style features | Clinicians recognize the drivers; explainable with SHAP | Not a deep clinical model; tuned for adoption |
+
+### As built vs design v0.4
+
+The approved design PDF is kept as approved (v0.4). Where the build differs, the decision log is the source of truth:
+
+| Area | Design v0.4 | As built | Decision |
+|---|---|---|---|
+| PHI tag | `phi = direct_identifier \| quasi_identifier` | `phi_data_classification` (HIPAA Safe Harbor categories); facility scope via `row_filter_policy = facility_id` | #62 |
+| ABAC scope | Silver and gold schemas | Also `ehr_bronze`; only the pipeline run-as identity is exempt; `care_worklist_synced` foreign table tagged too | #62, #66 |
+| Governance deployment | Not specified | New `<env>_readmit_governance` job (tags, functions, policies, leader grants, metric view) | #62, #65 |
+| Leadership test | Account group | `is_member()`; dev keeps a workspace-local group (developer is not an account admin), prod should use an account group | #65 |
+| Lakebase provisioning | `readmit_setup` creates synced tables and the Genie space | Project, database, synced tables, and Genie Agent are bundle resources; `readmit_setup` does only the app schema, CDF feed, and app grants | #40, #63 |
+| Daily cycle | `ingest_curate` -> `score_discharges` -> `build_worklist` | Adds `publish_worklist` (triggered sync, row-count check, re-grants app reads) | #41, #68 |
+| Synced tables | `care_worklist`, `care_team_roster` | Minimum-necessary views `*_active` (13 columns, latest 30 days); pipeline storage in `readmission_worklist_sync_internal` | #46, #48 |
+| ERD | v0.4 tables | `follow_up_appointment.booked_ts`; `care_worklist.worklist_date` / `assignment_status` (OVERFLOW); new `care_manager_capacity`; effective-dated `risk_tier_policy`; extra `readmission_outcome` columns | #23, #32, #51, #53 |
+| Constraints | PK and FK informational constraints | PKs only; FKs failed the pipeline update and are checked by query | #25 |
+| Demo-only jobs | Source simulator | Also `readmit_program_backfill` and `readmit_outreach_simulator` | #29, #44 |
+| SQL warehouse | Named only | Bundle resource `<env>_readmit_wh` | #37 |
+| Prod deployment | Not specified | Deployed by the `run_as` service principal itself (CI); never exercised | #67 |
 
 ## Prerequisites
 
@@ -316,13 +335,13 @@ Run evidence: [`evidence/phase5/`](evidence/phase5/). Decisions #50-#57.
 
 | Asset | What it does |
 |---|---|
-| Column tags | Account-level governed tag `phi_data_classification` (HIPAA Safe Harbor categories: `name`, `mrn`, `phone_number`, `address`, `account_number`, `date`) on PHI columns in `ehr_bronze`, `clinical_silver`, and `readmission_worklist_gold.care_worklist`; `row_filter_policy = facility_id` on patient-level facts |
+| Column tags | Account-level governed tag `phi_data_classification` (HIPAA Safe Harbor categories: `name`, `mrn`, `phone_number`, `address`, `account_number`, `date`) on PHI columns in `ehr_bronze`, `clinical_silver`, `readmission_worklist_gold.care_worklist`, and its Lakebase foreign table `care_worklist_synced` (#66); `row_filter_policy = facility_id` on patient-level facts |
 | `phi_governance` functions | `mask_direct_identifier` (`***`), `mask_birth_date` (January 1 of the birth year; NULL past age 89), `filter_by_facility` (leadership sees all; others see facilities assigned to them today) |
 | ABAC policies | `readmit_mask_direct_identifier`, `readmit_mask_birth_date`, `readmit_filter_by_facility` on `ehr_bronze`, `clinical_silver`, `care_management_silver`, `readmission_worklist_gold`, to `account users` except the pipeline identity (it must read unmasked data, or refreshes write masked values) |
 | Metric view | `readmission_worklist_gold.readmission_program_metrics`: the one definition of the Program KPIs, both cost-avoided methods included, for the app and Genie |
-| Genie Agent | `Readmission Program (<env>)`, bundle resource over the metric view, `readmission_outcome`, `care_worklist` (names, phones, briefs excluded from Genie's context), and `facility`; CAN_RUN for `care_mgmt_leadership` |
+| Genie Agent | `Readmission Program (<env>)`, bundle resource over the metric view, `readmission_outcome`, `care_worklist` (names, phones, patient IDs, briefs excluded from Genie's context), and `facility`; CAN_RUN for `care_mgmt_leadership` |
 
-Run evidence: [`evidence/phase6/`](evidence/phase6/). Decisions #60-#63.
+Run evidence: [`evidence/phase6/`](evidence/phase6/) and [`evidence/phase7/`](evidence/phase7/). Decisions #60-#68.
 
 ## Synthetic EHR source simulator
 
@@ -337,7 +356,7 @@ Run evidence: [`evidence/phase6/`](evidence/phase6/). Decisions #60-#63.
 └── _manifests/run_<id>.json              dates landed by each run, with row counts
 ```
 
-- **Story:** about 16% system-wide 30-day readmissions. Riverbend Community (rural) completes about 29% of 7-day follow-ups versus 48-55% elsewhere and readmits about 21%. Heart failure patients without a 7-day follow-up readmit at about 27%, versus about 15% with one. COPD and pneumonia readmissions rise in winter. Current numbers are in [`evidence/phase1/`](evidence/phase1/).
+- **Story:** about 17% system-wide 30-day readmissions (any inpatient readmission; about 14-16% under the model's non-elective label, #26). Riverbend Community (rural) completes about 29% of 7-day follow-ups versus 48-55% elsewhere and readmits about 22%. Heart failure patients without a 7-day follow-up readmit at about 27%, versus about 18% with one. COPD and pneumonia readmissions rise in winter. Current numbers (generator v4) are in [`evidence/phase4/simulator_v4_reland.log`](evidence/phase4/simulator_v4_reland.log); [`evidence/phase1/`](evidence/phase1/) holds the original v2 numbers.
 - **Program response (generator v4):** the simulator reads REACHED calls back from `readmission_worklist_app_bronze.lb_outreach_activity_history`. A reached patient without a 7-day follow-up gets one booked by the care manager (65%), and the readmission risk drops for the call and, when attended within 7 days, for the visit. Outreach only prevents readmissions after the call, never adds them. See DECISIONS.md #45 and [`evidence/phase4/`](evidence/phase4/).
 - **Source shape:** natural keys only (`mrn`, `encounter_number`, `appointment_number`); every record carries `record_updated_ts` for change sequencing. About 0.5% of rows are deliberately bad (null keys, impossible dates, malformed codes, re-sent duplicates) for the bronze expectations to quarantine.
 - **Idempotent:** every random draw is a hash of a fixed seed and the row key, and stays are generated 46 days past `run_date`, so a given date always produces the same records. Each run lands only dates not yet listed in a manifest (removing partial folders from an interrupted run first) and lands any late-arriving records for recent dates. The first run backfills from `history_start`; later runs land only the new days.
@@ -352,7 +371,7 @@ DATABRICKS_CONFIG_PROFILE=<profile> PYTHONPATH=src uv run --no-project --python 
   python -m readmit.simulator.main --env dev --catalog rtr_demo_catalog --history-start 2024-11-01 --dry-run
 ```
 
-## Configuration *(planned)*
+## Configuration
 
 Bundle variables in `databricks.yml`:
 

@@ -1,0 +1,153 @@
+# C2-C5: governance claims that had no committed text evidence
+# C2 exempt identity reads real values (#62); C3 root cause of the redaction incident (#60);
+# C4 leadership test functions (#65); C5 care_team_assignment profile and gold event_log tables (#67).
+# Run as the pipeline run-as identity (the author in dev), the one principal the ABAC policies exempt.
+# Run 2026-11-10T14:15:40Z as ryan.rabold@databricks.com, profile fevm-classic-stable, warehouse b2f6ee775c2fa42c
+
+### C2: project ABAC policy writes (audit log; the job upserts all 12 policies on every run, logged as updatePolicy)
+SELECT request_params.name AS policy_name, action_name, count(*) events, min(event_time) first_event, max(event_time) last_event,
+       collect_set(user_identity.email) by_principal, collect_set(response.status_code) status_codes
+FROM system.access.audit
+WHERE event_date BETWEEN '2026-11-08' AND '2026-11-10' AND service_name = 'unityCatalog'
+  AND action_name IN ('createPolicy', 'updatePolicy', 'deletePolicy') AND request_params.name LIKE 'readmit_%'
+GROUP BY 1, 2 ORDER BY 1, 2
+SUCCEEDED
+policy_name,action_name,events,first_event,last_event,by_principal,status_codes
+readmit_filter_by_facility,updatePolicy,20,2026-11-09T02:05:55.534Z,2026-11-09T21:32:09.979Z,"[""ryan.rabold@databricks.com""]","[""200""]"
+readmit_mask_birth_date,updatePolicy,20,2026-11-09T02:05:54.705Z,2026-11-09T21:32:09.367Z,"[""ryan.rabold@databricks.com""]","[""200""]"
+readmit_mask_direct_identifier,updatePolicy,20,2026-11-09T02:05:53.786Z,2026-11-09T21:32:08.411Z,"[""ryan.rabold@databricks.com""]","[""200""]"
+
+### C2: exempt identity reads unmasked values in every masked schema (0 masked rows expected)
+SELECT 'ehr_bronze.patient_raw' t, count(*) n, count_if(first_name = '***' OR mrn = '***' OR phone = '***') masked,
+       count(DISTINCT first_name) distinct_first, round(avg(CAST(month(birth_date) = 1 AND day(birth_date) = 1 AS INT)), 4) share_jan_1
+FROM rtr_demo_catalog.ehr_bronze.patient_raw
+UNION ALL SELECT 'clinical_silver.patient', count(*), count_if(first_name = '***' OR last_name = '***' OR mrn = '***' OR phone = '***' OR zip_code = '***'),
+       count(DISTINCT first_name), round(avg(CAST(month(birth_date) = 1 AND day(birth_date) = 1 AS INT)), 4)
+FROM rtr_demo_catalog.clinical_silver.patient
+UNION ALL SELECT 'readmission_worklist_gold.care_worklist', count(*), count_if(patient_display_name = '***' OR phone = '***'), count(DISTINCT patient_display_name), NULL
+FROM rtr_demo_catalog.readmission_worklist_gold.care_worklist
+UNION ALL SELECT 'readmission_worklist_gold.care_worklist_active (view)', count(*), count_if(patient_display_name = '***' OR phone = '***'), count(DISTINCT patient_display_name), NULL
+FROM rtr_demo_catalog.readmission_worklist_gold.care_worklist_active
+UNION ALL SELECT 'readmission_worklist_gold.care_worklist_synced (foreign)', count(*), count_if(patient_display_name = '***' OR phone = '***'), count(DISTINCT patient_display_name), NULL
+FROM rtr_demo_catalog.readmission_worklist_gold.care_worklist_synced
+SUCCEEDED
+t,n,masked,distinct_first,share_jan_1
+ehr_bronze.patient_raw,71899,0,119,0.0054
+clinical_silver.patient,69126,0,119,0.0027
+readmission_worklist_gold.care_worklist,8640,0,4398,
+readmission_worklist_gold.care_worklist_active (view),1465,0,1230,
+readmission_worklist_gold.care_worklist_synced (foreign),1465,0,1230,
+
+### C2: exempt identity is not row-filtered (all five facilities visible)
+SELECT 'readmission_outcome' t, count(*) n, count(DISTINCT facility_id) facilities FROM rtr_demo_catalog.readmission_worklist_gold.readmission_outcome
+UNION ALL SELECT 'care_worklist', count(*), count(DISTINCT facility_id) FROM rtr_demo_catalog.readmission_worklist_gold.care_worklist
+UNION ALL SELECT 'clinical_silver.encounter', count(*), count(DISTINCT facility_id) FROM rtr_demo_catalog.clinical_silver.encounter
+SUCCEEDED
+t,n,facilities
+readmission_outcome,113711,5
+care_worklist,8640,5
+clinical_silver.encounter,206195,5
+
+### C2: latest pipeline and job writes vs policy creation (writes after the policies would prove the write path)
+SELECT 'clinical_silver.patient' t, max(audit_updated_at) latest_write FROM rtr_demo_catalog.clinical_silver.patient
+UNION ALL SELECT 'clinical_silver.encounter', max(audit_updated_at) FROM rtr_demo_catalog.clinical_silver.encounter
+UNION ALL SELECT 'readmission_worklist_gold.discharge_features', max(audit_updated_at) FROM rtr_demo_catalog.readmission_worklist_gold.discharge_features
+UNION ALL SELECT 'readmission_worklist_gold.readmission_outcome', max(audit_updated_at) FROM rtr_demo_catalog.readmission_worklist_gold.readmission_outcome
+UNION ALL SELECT 'readmission_worklist_gold.discharge_risk_score', max(audit_updated_at) FROM rtr_demo_catalog.readmission_worklist_gold.discharge_risk_score
+UNION ALL SELECT 'readmission_worklist_gold.care_worklist', max(audit_updated_at) FROM rtr_demo_catalog.readmission_worklist_gold.care_worklist
+SUCCEEDED
+t,latest_write
+clinical_silver.patient,2026-11-08T15:50:50.237Z
+clinical_silver.encounter,2026-11-06T17:30:46.837Z
+readmission_worklist_gold.discharge_features,2026-11-07T16:53:05.201Z
+readmission_worklist_gold.readmission_outcome,2026-11-07T16:53:15.273Z
+readmission_worklist_gold.discharge_risk_score,2026-11-06T18:40:07.353Z
+readmission_worklist_gold.care_worklist,2026-11-08T15:52:16.583Z
+
+### C3: tag assignments on project tables carrying class.* tags, 2026-11-03 to 2026-11-09 (audit log)
+SELECT event_time, action_name, user_identity.email AS principal, response.status_code,
+       request_params.securable_full_name, request_params.subentity_name, request_params.changes
+FROM system.access.audit
+WHERE event_date BETWEEN '2026-11-03' AND '2026-11-09' AND service_name = 'unityCatalog'
+  AND action_name IN ('UpdateTagSubentityAssignments', 'createEntityTagAssignment', 'deleteEntityTagAssignment')
+  AND to_json(request_params) LIKE '%class.%'
+  AND request_params.securable_full_name RLIKE '^rtr_demo_catalog\\.(ehr_bronze|clinical_silver|care_management_silver|readmission_worklist_gold|readmission_worklist_app_bronze)\\.'
+ORDER BY event_time
+SUCCEEDED
+event_time,action_name,principal,status_code,securable_full_name,subentity_name,changes
+2026-11-04T12:54:33.739Z,UpdateTagSubentityAssignments,77f19abf-81ef-4969-ad97-cc0e63a8f662,200,rtr_demo_catalog.clinical_silver.patient,first_name,"{""add_tags"":[{""key"":""class.name""}]}"
+2026-11-04T12:54:34.401Z,UpdateTagSubentityAssignments,77f19abf-81ef-4969-ad97-cc0e63a8f662,200,rtr_demo_catalog.clinical_silver.patient,last_name,"{""add_tags"":[{""key"":""class.name""}]}"
+2026-11-04T12:54:35.096Z,UpdateTagSubentityAssignments,77f19abf-81ef-4969-ad97-cc0e63a8f662,200,rtr_demo_catalog.ehr_bronze.patient_raw,first_name,"{""add_tags"":[{""key"":""class.name""}]}"
+2026-11-04T12:54:35.524Z,UpdateTagSubentityAssignments,77f19abf-81ef-4969-ad97-cc0e63a8f662,200,rtr_demo_catalog.ehr_bronze.patient_raw,last_name,"{""add_tags"":[{""key"":""class.name""}]}"
+2026-11-06T12:54:56.712Z,UpdateTagSubentityAssignments,77f19abf-81ef-4969-ad97-cc0e63a8f662,200,rtr_demo_catalog.readmission_worklist_gold.care_worklist_synced,patient_display_name,"{""add_tags"":[{""key"":""class.name""}]}"
+
+### C3: principal 77f19abf-81ef-4969-ad97-cc0e63a8f662 (is it a person or a service principal?)
+SELECT DISTINCT user_identity.email AS principal, identity_metadata.run_by, identity_metadata.run_as, user_agent
+FROM system.access.audit
+WHERE event_date BETWEEN '2026-11-04' AND '2026-11-04' AND user_identity.email = '77f19abf-81ef-4969-ad97-cc0e63a8f662'
+  AND action_name = 'UpdateTagSubentityAssignments'
+SUCCEEDED
+principal,run_by,run_as,user_agent
+77f19abf-81ef-4969-ad97-cc0e63a8f662,77f19abf-81ef-4969-ad97-cc0e63a8f662,77f19abf-81ef-4969-ad97-cc0e63a8f662,python-requests/2.32.4
+
+### C3: who made those calls, by action (summary)
+SELECT action_name, user_identity.email, count(*) n, min(event_time) first_event, max(event_time) last_event
+FROM system.access.audit
+WHERE event_date BETWEEN '2026-11-03' AND '2026-11-09' AND service_name = 'unityCatalog'
+  AND action_name IN ('UpdateTagSubentityAssignments', 'createEntityTagAssignment', 'deleteEntityTagAssignment')
+  AND to_json(request_params) LIKE '%class.%'
+  AND request_params.securable_full_name RLIKE '^rtr_demo_catalog\\.(ehr_bronze|clinical_silver|care_management_silver|readmission_worklist_gold|readmission_worklist_app_bronze)\\.'
+GROUP BY 1, 2 ORDER BY 4
+SUCCEEDED
+action_name,email,n,first_event,last_event
+UpdateTagSubentityAssignments,77f19abf-81ef-4969-ad97-cc0e63a8f662,5,2026-11-04T12:54:33.739Z,2026-11-06T12:54:56.712Z
+
+### C4: leadership test functions for the author, a member of workspace-local group care_mgmt_leadership
+SELECT current_user() AS user, is_member('care_mgmt_leadership') AS is_member, is_account_group_member('care_mgmt_leadership') AS is_account_group_member
+SUCCEEDED
+user,is_member,is_account_group_member
+ryan.rabold@databricks.com,true,false
+
+### C4: the facility filter function's leadership branch for the author (all facilities)
+SELECT count(*) facilities_visible_through_filter FROM rtr_demo_catalog.clinical_silver.facility f
+WHERE rtr_demo_catalog.phi_governance.filter_by_facility(f.facility_id)
+SUCCEEDED
+facilities_visible_through_filter
+5
+
+### C5: care_team_assignment profile (why the assigned-subset branch is untested, #67)
+SELECT count(DISTINCT care_manager_email) care_managers, count(*) rows,
+       count_if(expiration_date IS NULL OR expiration_date > current_date()) active_rows,
+       count(DISTINCT facility_id) facilities, collect_set(facility_id) facility_ids
+FROM rtr_demo_catalog.care_management_silver.care_team_assignment
+SUCCEEDED
+care_managers,rows,active_rows,facilities,facility_ids
+1,5,5,5,"[""FAC-LMC"",""FAC-NGR"",""FAC-SVH"",""FAC-CCH"",""FAC-RCH""]"
+
+### C5: event_log tables that stay in readmission_worklist_gold (#48 correction, #67)
+SELECT table_name, table_type, created, last_altered
+FROM rtr_demo_catalog.information_schema.tables
+WHERE table_schema = 'readmission_worklist_gold' AND table_name LIKE 'event_log_%' ORDER BY 1
+SUCCEEDED
+table_name,table_type,created,last_altered
+event_log_2051653d_2e68_439e_95ae_74fcd727038d,MANAGED,2026-11-06T16:20:31.579Z,2026-11-10T01:04:17.989Z
+event_log_79bc3344_3bf2_41d7_85c0_9b6215af1a2e,MANAGED,2026-11-06T16:20:30.983Z,2026-11-10T01:03:25.406Z
+
+### C3: care_worklist_synced was recreated after the 2026-11-06 12:54 tag (#48), so that class.name tag went with the old table
+SELECT table_name, table_type, created, created_by FROM rtr_demo_catalog.information_schema.tables
+WHERE table_schema = 'readmission_worklist_gold' AND table_name IN ('care_worklist_synced', 'care_team_roster_synced', 'care_worklist')
+SUCCEEDED
+table_name,table_type,created,created_by
+care_worklist_synced,FOREIGN,2026-11-06T16:20:10.375Z,ryan.rabold@databricks.com
+care_worklist,MANAGED,2026-11-05T17:18:09.073Z,ryan.rabold@databricks.com
+care_team_roster_synced,FOREIGN,2026-11-06T16:20:11.722Z,ryan.rabold@databricks.com
+
+### C3: tags on care_worklist_synced columns now (expected: phi_data_classification and row_filter_policy from #66, no class.*)
+SELECT column_name, tag_name, tag_value FROM rtr_demo_catalog.information_schema.column_tags
+WHERE schema_name = 'readmission_worklist_gold' AND table_name = 'care_worklist_synced' ORDER BY 1, 2
+SUCCEEDED
+column_name,tag_name,tag_value
+facility_id,row_filter_policy,facility_id
+patient_display_name,phi_data_classification,name
+phone,phi_data_classification,phone_number
+

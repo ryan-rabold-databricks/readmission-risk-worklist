@@ -1,0 +1,37 @@
+# C11 run 2026-11-10T14:23:53Z as ryan.rabold@databricks.com; projects/readmission-worklist/branches/production, database readmission_worklist. One transaction, always rolled back.
+
+### Connected role, database oid
+SELECT current_user, current_database(), (SELECT oid FROM pg_database WHERE datname = current_database())
+['current_user', 'current_database', 'oid']
+('ryan.rabold@databricks.com', 'readmission_worklist', 16845)
+
+### Owners of the synced tables
+SELECT schemaname, tablename, tableowner FROM pg_tables WHERE schemaname = 'readmission_worklist_gold' ORDER BY 2
+['schemaname', 'tablename', 'tableowner']
+('readmission_worklist_gold', 'care_team_roster_synced', 'databricks_writer_16845')
+('readmission_worklist_gold', 'care_worklist_synced', 'databricks_writer_16845')
+
+### Built-in databricks_* roles in this database
+SELECT rolname FROM pg_roles WHERE rolname LIKE 'databricks_writer_%%' OR rolname LIKE 'databricks_reader_%%' ORDER BY 1
+['rolname']
+('databricks_reader_16407',)
+('databricks_reader_16845',)
+('databricks_writer_16407',)
+('databricks_writer_16845',)
+
+### App role can read each synced table today (after publish_worklist re-grants, #68)
+SELECT c.relname, has_table_privilege(%s, c.oid, 'SELECT') app_can_select FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'readmission_worklist_gold' AND c.relkind IN ('r', 'p') ORDER BY 1
+['relname', 'app_can_select']
+('care_team_roster_synced', True)
+('care_worklist_synced', True)
+
+### Alternative 1: default privileges for the synced-table owner
+ALTER DEFAULT PRIVILEGES FOR ROLE "databricks_writer_16845" IN SCHEMA readmission_worklist_gold GRANT SELECT ON TABLES TO "c21146c6-b973-4b42-a0cb-6cc41e5e777c"
+REFUSED: InsufficientPrivilege: permission denied to change default privileges
+
+### Alternative 2: grant the app role the built-in reader role
+GRANT "databricks_reader_16845" TO "c21146c6-b973-4b42-a0cb-6cc41e5e777c"
+REFUSED: InsufficientPrivilege: permission denied to grant role "databricks_reader_16845"
+DETAIL:  Only roles with the ADMIN option on role "databricks_reader_16845" may grant this role.
+
+### Transaction rolled back; nothing committed

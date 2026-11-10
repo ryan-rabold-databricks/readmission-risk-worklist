@@ -1,0 +1,27 @@
+# C8: local unit tests, run 2026-11-10T14:22:35Z at commit 4027ea9 (working tree: Phase 7 doc and evidence edits only)
+
+$ uv run --no-project --python 3.12 --with pytest --with "pyspark>=3.5,<4.1" --with databricks-sdk python -m pytest -q -rs -p no:warnings
+............................................ss.......................... [ 97%]
+..                                                                       [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_model.py:8: xgboost unavailable locally: XGBoostError
+SKIPPED [1] tests/test_program_response.py:48: local Spark unavailable: [JAVA_GATEWAY_EXITED] Java gateway process exited before sending its port number.
+SKIPPED [1] tests/test_program_response.py:57: local Spark unavailable: [JAVA_GATEWAY_EXITED] Java gateway process exited before sending its port number.
+72 passed, 3 skipped in 1.34s
+(exit 0)
+
+$ cd src/app && npm test
+
+> dev-readmission-worklist@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.9 /Users/ryan.rabold/readmission-risk-worklist/src/app
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  09:22:38
+   Duration  154ms (transform 19ms, setup 0ms, import 62ms, tests 4ms, environment 0ms)
+
+(exit 0)

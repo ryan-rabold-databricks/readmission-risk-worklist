@@ -1,0 +1,124 @@
+# Phase 7 CLI checks, run 2026-11-10T14:20:00Z as ryan.rabold@databricks.com
+
+## C2: ABAC policies on each masked schema (to_principals, except_principals, function)
+$ databricks policies list-policies schema rtr_demo_catalog.ehr_bronze
+{"name":"readmit_filter_by_facility","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":null,"filter":"rtr_demo_catalog.phi_governance.filter_by_facility","match":["has_tag_value('row_filter_policy', 'facility_id')"]}
+{"name":"readmit_mask_birth_date","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_birth_date","filter":null,"match":["has_tag_value('phi_data_classification', 'date')"]}
+{"name":"readmit_mask_direct_identifier","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_direct_identifier","filter":null,"match":["has_tag_value('phi_data_classification', 'name') OR has_tag_value('phi_data_classification', 'mrn') OR has_tag_value('phi_data_classification', 'phone_number') OR has_tag_value('phi_data_classification', 'address') OR has_tag_value('phi_data_classification', 'account_number')"]}
+
+$ databricks policies list-policies schema rtr_demo_catalog.clinical_silver
+{"name":"readmit_filter_by_facility","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":null,"filter":"rtr_demo_catalog.phi_governance.filter_by_facility","match":["has_tag_value('row_filter_policy', 'facility_id')"]}
+{"name":"readmit_mask_birth_date","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_birth_date","filter":null,"match":["has_tag_value('phi_data_classification', 'date')"]}
+{"name":"readmit_mask_direct_identifier","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_direct_identifier","filter":null,"match":["has_tag_value('phi_data_classification', 'name') OR has_tag_value('phi_data_classification', 'mrn') OR has_tag_value('phi_data_classification', 'phone_number') OR has_tag_value('phi_data_classification', 'address') OR has_tag_value('phi_data_classification', 'account_number')"]}
+
+$ databricks policies list-policies schema rtr_demo_catalog.care_management_silver
+{"name":"readmit_filter_by_facility","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":null,"filter":"rtr_demo_catalog.phi_governance.filter_by_facility","match":["has_tag_value('row_filter_policy', 'facility_id')"]}
+{"name":"readmit_mask_birth_date","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_birth_date","filter":null,"match":["has_tag_value('phi_data_classification', 'date')"]}
+{"name":"readmit_mask_direct_identifier","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_direct_identifier","filter":null,"match":["has_tag_value('phi_data_classification', 'name') OR has_tag_value('phi_data_classification', 'mrn') OR has_tag_value('phi_data_classification', 'phone_number') OR has_tag_value('phi_data_classification', 'address') OR has_tag_value('phi_data_classification', 'account_number')"]}
+
+$ databricks policies list-policies schema rtr_demo_catalog.readmission_worklist_gold
+{"name":"readmit_filter_by_facility","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":null,"filter":"rtr_demo_catalog.phi_governance.filter_by_facility","match":["has_tag_value('row_filter_policy', 'facility_id')"]}
+{"name":"readmit_mask_birth_date","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_birth_date","filter":null,"match":["has_tag_value('phi_data_classification', 'date')"]}
+{"name":"readmit_mask_direct_identifier","for_securable_type":"TABLE","to_principals":["account users"],"except_principals":["ryan.rabold@databricks.com"],"mask":"rtr_demo_catalog.phi_governance.mask_direct_identifier","filter":null,"match":["has_tag_value('phi_data_classification', 'name') OR has_tag_value('phi_data_classification', 'mrn') OR has_tag_value('phi_data_classification', 'phone_number') OR has_tag_value('phi_data_classification', 'address') OR has_tag_value('phi_data_classification', 'account_number')"]}
+
+## C3: identity of the principal that added class.name to the patient name columns (#60)
+$ databricks service-principals list --profile fevm-classic-stable --filter applicationId eq "77f19abf-81ef-4969-ad97-cc0e63a8f662" -o json
+[
+  {
+    "active": true,
+    "applicationId": "77f19abf-81ef-4969-ad97-cc0e63a8f662",
+    "displayName": "DataClassification Service Principal",
+    "entitlements": [
+      {
+        "value": "workspace-access"
+      },
+      {
+        "value": "databricks-sql-access"
+      }
+    ],
+    "id": "74596345706743"
+  }
+]
+(exit 0)
+
+## C4: account-level group lookup as the author (#65: not an account admin)
+$ databricks account groups list --profile fevm-account --filter displayName eq "care_mgmt_leadership"
+Error: This API is disabled for users without account admin status. Contact your administrator for more information. [ReqId: 7eaad97e-2723-4b95-b69f-a7755f7d25f9]
+
+Profile:   fevm-account
+Host:      https://accounts.cloud.databricks.com
+Auth type: OAuth (databricks-cli)
+
+Next steps:
+  - Verify you have the required permissions for this operation
+  - Check your identity: databricks auth describe --profile fevm-account
+(exit 1)
+
+$ databricks groups get 2127074584669110  (workspace-local group care_mgmt_leadership; list omits members)
+{"id":"2127074584669110","displayName":"care_mgmt_leadership","members":["Ryan Rabold"],"meta":{"resourceType":"WorkspaceGroup"}}
+
+## C5: the two synced-table pipelines whose event_log_* tables stay in readmission_worklist_gold (#48 correction, #67)
+$ databricks pipelines get 2051653d-2e68-439e-95ae-74fcd727038d
+{"pipeline_id":"2051653d-2e68-439e-95ae-74fcd727038d","name":"Synced table: rtr_demo_catalog.readmission_worklist_gold.care_team_roster_synced oe7O3h","state":"IDLE","spec_catalog":"rtr_demo_catalog","spec_schema":"readmission_worklist_gold","latest_update":{"update_id":"cea0755a-c1c7-477a-b29f-f71183ea78ce","state":"COMPLETED","creation_time":"2026-11-10T01:03:46.153Z"}}
+
+$ databricks pipelines get 79bc3344-3bf2-41d7-85c0-9b6215af1a2e
+{"pipeline_id":"79bc3344-3bf2-41d7-85c0-9b6215af1a2e","name":"Synced table: rtr_demo_catalog.readmission_worklist_gold.care_worklist_synced t9U30m","state":"IDLE","spec_catalog":"rtr_demo_catalog","spec_schema":"readmission_worklist_gold","latest_update":{"update_id":"9ab1f62c-89b7-464a-844d-6b78c004b8ad","state":"COMPLETED","creation_time":"2026-11-10T01:02:52.030Z"}}
+
+## C6: model aliases and the champion version
+$ databricks registered-models get rtr_demo_catalog.readmission_worklist_gold.readmission_risk --include-aliases
+{"full_name":"rtr_demo_catalog.readmission_worklist_gold.readmission_risk","aliases":[{"alias_name":"challenger","id":"4175b545-436a-429f-9da5-0e306608efe7","version_num":16},{"alias_name":"champion","id":"fdab1a8c-28e8-4228-96e0-3dac09cf3073","version_num":16}]}
+
+$ databricks model-versions get rtr_demo_catalog.readmission_worklist_gold.readmission_risk 16
+{"version":16,"run_id":"6a1d8827b58e4dab9933db4b3cee7671","status":"READY","created_at":1793990287355,"created_by":"ryan.rabold@databricks.com"}
+
+$ databricks experiments get-run 6a1d8827b58e4dab9933db4b3cee7671  (metrics, params, tags)
+{
+  "run_id": "6a1d8827b58e4dab9933db4b3cee7671",
+  "run_name": "readmission_risk_as_of_2026-11-01",
+  "status": "FINISHED",
+  "metrics": {
+    "champion_test_auc": 0.7444943392834709,
+    "champion_test_brier": 0.11075369331030284,
+    "champion_test_calibration_intercept": -0.07644426584990026,
+    "champion_test_calibration_slope": 0.9967805837609689,
+    "champion_test_mean_predicted": 0.15473160940557518,
+    "champion_test_n": 8972,
+    "champion_test_observed_rate": 0.1465670976370932,
+    "promoted": 1,
+    "test_auc": 0.7452636842651497,
+    "test_brier": 0.11062740549198273,
+    "test_calibration_intercept": -0.05028854561199627,
+    "test_calibration_slope": 1.0023400650485574,
+    "test_mean_predicted": 0.15261711299168615,
+    "test_n": 8972,
+    "test_observed_rate": 0.1465670976370932
+  },
+  "params": {
+    "as_of": "2026-11-01",
+    "colsample_bytree": "0.8",
+    "early_stopping_rounds": "50",
+    "eval_metric": "logloss",
+    "learning_rate": "0.04",
+    "max_depth": "4",
+    "min_child_weight": "10",
+    "n_estimators": "800",
+    "n_jobs": "4",
+    "random_state": "42",
+    "reg_lambda": "2.0",
+    "subsample": "0.8",
+    "train_start": "2025-11-01",
+    "window_test": "2026-08-02..2026-10-01",
+    "window_train": "2025-11-01..2026-06-01",
+    "window_validation": "2026-06-02..2026-08-01"
+  },
+  "tags": null
+}
+
+$ databricks model-versions get rtr_demo_catalog.readmission_worklist_gold.readmission_risk <v>  for v in 10..30 (versions from the v4 rebuild, #45)
+{"version":10,"status":"READY","created_at":1793986361394,"run_id":"dd2d1c68d9e04ab18a37a3ca16404bb2"}
+{"version":11,"status":"READY","created_at":1793987057424,"run_id":"cc2c57815be847fb8184aab748c4b451"}
+{"version":12,"status":"READY","created_at":1793987688634,"run_id":"7f45a007f959447bb1e9f217c26bf694"}
+{"version":13,"status":"READY","created_at":1793988338425,"run_id":"ffc203508254407688d1d7779e048a56"}
+{"version":14,"status":"READY","created_at":1793988995189,"run_id":"ff8f33abc563466099d284227a47de3f"}
+{"version":15,"status":"READY","created_at":1793989635610,"run_id":"d9e969fc74964e3593e0123817bf2a3c"}
+{"version":16,"status":"READY","created_at":1793990287355,"run_id":"6a1d8827b58e4dab9933db4b3cee7671"}

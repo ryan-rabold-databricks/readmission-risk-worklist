@@ -1,0 +1,129 @@
+# C10: app access-scope responses from the 2026-11-07 Phase 5 validation (#54), from the app's own request
+# logs in app_otel_logs (stdout exported by Databricks Apps telemetry, #55). IDs and paths only.
+# B6: attributes of every audit.genie.asked record, to resolve the None values in
+# evidence/phase6/genie_in_app_after_resignin.txt.
+# Run 2026-11-10T14:26:02Z as ryan.rabold@databricks.com, profile fevm-classic-stable, warehouse b2f6ee775c2fa42c
+
+### C10: request log line format (one example; client IP and user agent redacted)
+SELECT time, regexp_replace(regexp_replace(CAST(body AS STRING), '^[0-9a-f.:]+ ', '<client-ip> '), '"Mozilla[^"]*"', '"<user-agent>"') body
+FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs
+WHERE CAST(body AS STRING) RLIKE '"(GET|POST) /api/' LIMIT 1
+SUCCEEDED
+time,body
+2026-11-07T16:54:55.562Z,"<client-ip> - 73701527069100@7474647046080636 [07/Nov/2026:16:54:53 +0000] ""POST /api/analytics/query/settings_care_team HTTP/1.1"" 200 386 ""https://dev-readmission-worklist-7474647046080636.aws.databricksapps.com/settings"" ""<user-agent>"""
+
+### C10: app API responses on 2026-11-07 by method, route, and status
+WITH r AS (
+  SELECT time, regexp_extract(CAST(body AS STRING), '"(GET|POST|PUT|DELETE) (/api/[^ ?"]*)', 1) method,
+         regexp_extract(CAST(body AS STRING), '"(GET|POST|PUT|DELETE) (/api/[^ ?"]*)', 2) path,
+         regexp_extract(CAST(body AS STRING), 'HTTP/[0-9.]+" ([0-9]{3})', 1) status
+  FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs
+  WHERE date = '2026-11-07' AND CAST(body AS STRING) RLIKE '"(GET|POST|PUT|DELETE) /api/'
+)
+SELECT method, regexp_replace(path, '/[0-9a-f]{32,}|/[0-9a-f-]{36}', '/<id>') route, status, count(*) n, min(time) first_seen, max(time) last_seen
+FROM r GROUP BY 1, 2, 3 ORDER BY 2, 1, 3
+SUCCEEDED
+method,route,status,n,first_seen,last_seen
+POST,/api/analytics/query/facilities,200,1,2026-11-07T16:54:54.562Z,2026-11-07T16:54:54.562Z
+POST,/api/analytics/query/program_by_facility,200,2,2026-11-07T16:45:23.562Z,2026-11-07T16:55:21.561Z
+POST,/api/analytics/query/program_effect_by_tier,200,2,2026-11-07T16:45:23.562Z,2026-11-07T16:55:21.561Z
+POST,/api/analytics/query/program_kpis,200,3,2026-11-07T16:45:11.562Z,2026-11-07T16:55:21.561Z
+POST,/api/analytics/query/program_monthly,200,2,2026-11-07T16:45:23.562Z,2026-11-07T16:55:21.561Z
+POST,/api/analytics/query/settings_care_team,200,1,2026-11-07T16:54:55.562Z,2026-11-07T16:54:55.562Z
+POST,/api/analytics/query/settings_change_status,200,1,2026-11-07T16:54:54.562Z,2026-11-07T16:54:54.562Z
+POST,/api/analytics/query/settings_risk_tier_policy,200,1,2026-11-07T16:54:54.562Z,2026-11-07T16:54:54.562Z
+GET,/api/me,200,2,2026-11-07T16:41:26.561Z,2026-11-07T16:45:06.562Z
+GET,/api/me,304,5,2026-11-07T16:42:00.562Z,2026-11-07T16:54:53.562Z
+GET,/api/settings/changes,200,1,2026-11-07T16:54:53.562Z,2026-11-07T16:54:53.562Z
+POST,/api/settings/changes,200,1,2026-11-07T16:51:04.562Z,2026-11-07T16:51:04.562Z
+POST,/api/settings/changes,201,1,2026-11-07T16:51:04.562Z,2026-11-07T16:51:04.562Z
+GET,/api/worklist,200,2,2026-11-07T16:41:27.562Z,2026-11-07T16:46:37.561Z
+GET,/api/worklist,304,3,2026-11-07T16:42:00.562Z,2026-11-07T16:55:36.562Z
+GET,/api/worklist/dates,200,1,2026-11-07T16:41:27.562Z,2026-11-07T16:41:27.562Z
+GET,/api/worklist/dates,304,3,2026-11-07T16:42:00.562Z,2026-11-07T16:55:36.562Z
+GET,/api/worklist/items/<id>,200,2,2026-11-07T16:45:54.561Z,2026-11-07T16:46:37.561Z
+POST,/api/worklist/items/<id>/outreach,201,1,2026-11-07T16:46:37.561Z,2026-11-07T16:46:37.561Z
+
+### C10: the non-2xx responses in time order (out-of-roster 404, invalid activity 400, pre-group 403)
+SELECT time, regexp_extract(CAST(body AS STRING), '"((GET|POST|PUT|DELETE) /api/[^"]*)"', 1) request_line,
+       regexp_extract(CAST(body AS STRING), 'HTTP/[0-9.]+" ([0-9]{3})', 1) status
+FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs
+WHERE CAST(body AS STRING) RLIKE '"(GET|POST|PUT|DELETE) /api/' AND regexp_extract(CAST(body AS STRING), 'HTTP/[0-9.]+" ([0-9]{3})', 1) NOT LIKE '2%'
+ORDER BY time
+SUCCEEDED
+time,request_line,status
+2026-11-07T16:42:00.562Z,GET /api/me HTTP/1.1,304
+2026-11-07T16:42:00.562Z,GET /api/worklist/dates HTTP/1.1,304
+2026-11-07T16:42:00.562Z,GET /api/worklist HTTP/1.1,304
+2026-11-07T16:42:20.562Z,GET /api/me HTTP/1.1,304
+2026-11-07T16:45:20.561Z,GET /api/me HTTP/1.1,304
+2026-11-07T16:45:48.562Z,GET /api/me HTTP/1.1,304
+2026-11-07T16:45:48.562Z,GET /api/worklist/dates HTTP/1.1,304
+2026-11-07T16:45:49.561Z,GET /api/worklist HTTP/1.1,304
+2026-11-07T16:54:53.562Z,GET /api/me HTTP/1.1,304
+2026-11-07T16:55:36.562Z,GET /api/worklist/dates HTTP/1.1,304
+2026-11-07T16:55:36.562Z,GET /api/worklist HTTP/1.1,304
+2026-11-08T14:40:57.561Z,GET /api/me HTTP/1.1,304
+2026-11-08T14:52:27.562Z,GET /api/me HTTP/1.1,304
+2026-11-09T02:18:25.561Z,GET /api/me HTTP/1.1,304
+2026-11-09T02:18:26.562Z,GET /api/worklist/dates HTTP/1.1,304
+
+### C10: outreach writes on 2026-11-07 (201 created, 200 idempotent retry)
+SELECT time, regexp_extract(CAST(body AS STRING), '"((GET|POST|PUT|DELETE) /api/[^"]*)"', 1) request_line,
+       regexp_extract(CAST(body AS STRING), 'HTTP/[0-9.]+" ([0-9]{3})', 1) status
+FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs
+WHERE date = '2026-11-07' AND CAST(body AS STRING) RLIKE '"POST /api/'
+ORDER BY time
+SUCCEEDED
+time,request_line,status
+2026-11-07T16:45:11.562Z,POST /api/analytics/query/program_kpis HTTP/1.1,200
+2026-11-07T16:45:23.562Z,POST /api/analytics/query/program_by_facility HTTP/1.1,200
+2026-11-07T16:45:23.562Z,POST /api/analytics/query/program_kpis HTTP/1.1,200
+2026-11-07T16:45:23.562Z,POST /api/analytics/query/program_effect_by_tier HTTP/1.1,200
+2026-11-07T16:45:23.562Z,POST /api/analytics/query/program_monthly HTTP/1.1,200
+2026-11-07T16:46:37.561Z,POST /api/worklist/items/0cf114b2f603950a884e642cf2e599eec338940aa1a954895b67b0fd382b55a0/outreach HTTP/1.1,201
+2026-11-07T16:51:04.562Z,POST /api/settings/changes HTTP/1.1,201
+2026-11-07T16:51:04.562Z,POST /api/settings/changes HTTP/1.1,200
+2026-11-07T16:54:54.562Z,POST /api/analytics/query/settings_change_status HTTP/1.1,200
+2026-11-07T16:54:54.562Z,POST /api/analytics/query/facilities HTTP/1.1,200
+2026-11-07T16:54:54.562Z,POST /api/analytics/query/settings_risk_tier_policy HTTP/1.1,200
+2026-11-07T16:54:55.562Z,POST /api/analytics/query/settings_care_team HTTP/1.1,200
+2026-11-07T16:55:21.561Z,POST /api/analytics/query/program_monthly HTTP/1.1,200
+2026-11-07T16:55:21.561Z,POST /api/analytics/query/program_kpis HTTP/1.1,200
+2026-11-07T16:55:21.561Z,POST /api/analytics/query/program_effect_by_tier HTTP/1.1,200
+2026-11-07T16:55:21.561Z,POST /api/analytics/query/program_by_facility HTTP/1.1,200
+
+### B6: every audit.genie.asked record (the event name is in attributes['event.name'] and the body; the top-level event_name column is empty for these records, which is why phase6/genie_in_app_after_resignin.txt shows None)
+SELECT time, event_name AS top_level_event_name, attributes:['event.name']::string AS attr_event_name, CAST(body AS STRING) body,
+       attributes:['audit.action']::string AS action, attributes:['audit.record_type']::string AS record_type,
+       attributes:['audit.record_id']::string AS record_id, attributes:['audit.user_email']::string AS user_email
+FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs
+WHERE instrumentation_scope.name = 'readmission-worklist.audit' AND attributes:['event.name']::string = 'audit.genie.asked' ORDER BY time
+SUCCEEDED
+time,top_level_event_name,attr_event_name,body,action,record_type,record_id,user_email
+2026-11-09T02:18:51.957Z,,audit.genie.asked,audit.genie.asked,new_conversation,genie_conversation,,ryan.rabold@databricks.com
+2026-11-10T00:37:04.038Z,,audit.genie.asked,audit.genie.asked,new_conversation,genie_conversation,,ryan.rabold@databricks.com
+2026-11-10T00:37:57.086Z,,audit.genie.asked,audit.genie.asked,follow_up,genie_conversation,01f1dc9eda5c175ab0a2a3836fb40ef7,ryan.rabold@databricks.com
+
+### B6: audit records in bronze vs curated silver app_audit_event, by event (silver lags until the next pipeline run)
+SELECT b.event, b.bronze_records, s.silver_rows, b.latest_bronze, s.latest_silver FROM
+ (SELECT attributes:['event.name']::string event, count(*) bronze_records, max(time) latest_bronze
+  FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs WHERE instrumentation_scope.name = 'readmission-worklist.audit' GROUP BY 1) b
+FULL OUTER JOIN
+ (SELECT CASE WHEN event_name LIKE 'audit.%' THEN event_name ELSE concat('audit.', event_name) END event, count(*) silver_rows, max(event_ts) latest_silver
+  FROM rtr_demo_catalog.care_management_silver.app_audit_event GROUP BY 1) s USING (event)
+ORDER BY 1
+SUCCEEDED
+event,bronze_records,silver_rows,latest_bronze,latest_silver
+audit.genie.asked,3,,2026-11-10T00:37:57.086Z,
+audit.outreach.logged,1,1,2026-11-07T16:46:36.779Z,2026-11-07T16:46:36.779Z
+audit.settings.changed,1,1,2026-11-07T16:51:03.578Z,2026-11-07T16:51:03.578Z
+audit.worklist.viewed,10,6,2026-11-10T00:35:44.078Z,2026-11-07T16:46:36.876Z
+
+### C10: any 4xx response from the deployed app in the whole telemetry window (2026-11-06 22:57 onward)
+SELECT count(*) responses_4xx FROM rtr_demo_catalog.readmission_worklist_app_bronze.app_otel_logs
+WHERE CAST(body AS STRING) RLIKE 'HTTP/[0-9.]+" 4[0-9]{2}'
+SUCCEEDED
+responses_4xx
+0
+
