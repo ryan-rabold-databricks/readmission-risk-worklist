@@ -1,0 +1,7 @@
+# In-app Genie after re-sign-in (check 3), app_otel_logs 2026-11-10 00:36-00:39 UTC; IDs only
+time,event_name,severity,request
+2026-11-10T00:37:23.562Z,None,UNKNOWN,POST /api/genie/default/messages HTTP/1.1" 200
+2026-11-10T00:38:15.562Z,None,UNKNOWN,POST /api/genie/default/messages HTTP/1.1" 200
+time,audit_event,action,record_type
+2026-11-10T00:37:04.038Z,audit.genie.asked,None,None
+2026-11-10T00:37:57.086Z,audit.genie.asked,None,None
