@@ -19,7 +19,7 @@ def date_range(start: date, end: date) -> list[date]:
 
 
 def release_ts(worklist_date: date) -> datetime:
-    """When a worklist day is released to care managers: 12:00 UTC (07:00 US Central)."""
+    """When a worklist day is released to care managers: 12:00 UTC (06:00 CST in winter, 07:00 CDT in summer)."""
     return datetime(worklist_date.year, worklist_date.month, worklist_date.day, 12, tzinfo=timezone.utc)
 
 
