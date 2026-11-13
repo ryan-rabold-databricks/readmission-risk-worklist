@@ -2,7 +2,7 @@
 # 2026-11-13, pipeline update 6bf73f). These are the numbers for the deck. Previously C7, from the app's own *.obo.sql queries (parameters bound to the dev defaults:
 # catalog = rtr_demo_catalog, go_live = 2026-05-01). Data unchanged since worklist day 2026-11-06 (D1 not run),
 # so these should equal evidence/phase6/metric_view_headline.txt and app_validation.md. Run as the author (exempt).
-# Run 2026-11-13T15:17:59Z as ryan.rabold@databricks.com, profile fevm-classic-stable, warehouse b2f6ee775c2fa42c
+# Run 2026-11-13T21:24:30Z as ryan.rabold@databricks.com, profile fevm-classic-stable, warehouse b2f6ee775c2fa42c
 
 ### program_kpis.obo.sql
 SELECT
@@ -134,5 +134,17 @@ SELECT (SELECT count(*) FROM rtr_demo_catalog.care_management_silver.outreach_ac
                               FROM rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history) WHERE rn = 1 AND _pg_change_type != 'delete') bronze_current
 SUCCEEDED
 silver_rows,bronze_current
-21568,21568
+21568,21569
+
+### Targeting: share of matured program discharges on the worklist vs share of their readmissions (outreach already prevented some readmissions on the worklist, so this understates the model's concentration)
+SELECT count(*) matured_program_discharges, round(avg(CAST(was_on_worklist AS INT)) * 100, 1) pct_discharges_on_worklist,
+       round(sum(CAST(was_on_worklist AND outcome_status = 'READMITTED' AS INT)) / sum(CAST(outcome_status = 'READMITTED' AS INT)) * 100, 1) pct_readmissions_on_worklist,
+       round(avg(CASE WHEN was_on_worklist THEN CAST(outcome_status = 'READMITTED' AS INT) END) * 100, 1) readmit_rate_on_worklist,
+       round(avg(CASE WHEN NOT was_on_worklist THEN CAST(outcome_status = 'READMITTED' AS INT) END) * 100, 1) readmit_rate_off_worklist,
+       round(count(*) / datediff(max(discharge_date), min(discharge_date)), 1) discharges_per_day
+FROM rtr_demo_catalog.readmission_worklist_gold.readmission_outcome
+WHERE discharge_date >= DATE'2026-04-30' AND outcome_status <> 'PENDING'
+SUCCEEDED
+matured_program_discharges,pct_discharges_on_worklist,pct_readmissions_on_worklist,readmit_rate_on_worklist,readmit_rate_off_worklist,discharges_per_day
+24623,30.6,62.2,29.3,7.9,148.3
 

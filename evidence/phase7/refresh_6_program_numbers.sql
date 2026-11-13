@@ -71,3 +71,11 @@ WHERE w.worklist_date >= DATE'2026-11-04' AND w.assignment_status = 'ASSIGNED' G
 SELECT (SELECT count(*) FROM rtr_demo_catalog.care_management_silver.outreach_activity) silver_rows,
        (SELECT count(*) FROM (SELECT *, row_number() OVER (PARTITION BY activity_id ORDER BY _pg_lsn DESC, _sort_by DESC) rn
                               FROM rtr_demo_catalog.readmission_worklist_app_bronze.lb_outreach_activity_history) WHERE rn = 1 AND _pg_change_type != 'delete') bronze_current
+-- ### Targeting: share of matured program discharges on the worklist vs share of their readmissions (outreach already prevented some readmissions on the worklist, so this understates the model's concentration)
+SELECT count(*) matured_program_discharges, round(avg(CAST(was_on_worklist AS INT)) * 100, 1) pct_discharges_on_worklist,
+       round(sum(CAST(was_on_worklist AND outcome_status = 'READMITTED' AS INT)) / sum(CAST(outcome_status = 'READMITTED' AS INT)) * 100, 1) pct_readmissions_on_worklist,
+       round(avg(CASE WHEN was_on_worklist THEN CAST(outcome_status = 'READMITTED' AS INT) END) * 100, 1) readmit_rate_on_worklist,
+       round(avg(CASE WHEN NOT was_on_worklist THEN CAST(outcome_status = 'READMITTED' AS INT) END) * 100, 1) readmit_rate_off_worklist,
+       round(count(*) / datediff(max(discharge_date), min(discharge_date)), 1) discharges_per_day
+FROM rtr_demo_catalog.readmission_worklist_gold.readmission_outcome
+WHERE discharge_date >= DATE'2026-04-30' AND outcome_status <> 'PENDING'
