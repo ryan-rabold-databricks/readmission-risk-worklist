@@ -21,8 +21,10 @@ The numbers change at two points, so compare numbers only within one era:
 | v3 | 2026-11-05 | Generator v3 (#35), models v3-v9 | `phase3/`, `phase4/` files dated 11-05 |
 | **v4 (current)** | 2026-11-06 onward | Generator v4 program response (#45), re-landed and rebuilt; models v10-v16 | `phase4/` files dated 11-06, `phase5/`, `phase6/`, `phase7/` |
 
-The latest worklist day is **2026-11-06**; the source simulator and daily cycle have not landed new days since
-(the 2026-11-09 publish found 0 rows for 2026-11-10, `phase6/publish_regrant_run.log`).
+On 2026-11-13 the data was refreshed (`phase7/refresh_*`): new extract days through 2026-11-12, worklist days
+2026-11-07 to 2026-11-13, simulated outreach for days before 2026-11-13 (2026-11-13 is left open for a live demo),
+and a pipeline update. Numbers in files before the refresh stop at worklist day 2026-11-06; the current Program
+numbers are in `phase7/refresh_6_program_numbers.raw.txt`.
 
 **Redaction window (#60):** from 2026-11-04 12:54 UTC to the repair on 2026-11-08, patient names in
 `clinical_silver.patient` and `care_worklist` were physically "REDACTED". Checks run in that window that compare
@@ -76,7 +78,7 @@ against names prove nothing; both have been re-run in `phase7/c1_phi_content_che
 
 | File | Backs | Status |
 |---|---|---|
-| `phase5/app_validation.md` | #50-#57 | **Superseded in part (B5):** the Program tab capture shows 7-day follow-up 49.7% / +2.7 pts, changed by #59 to 50.8% / +3.9 (current values in `phase6/app_validation.md` and `phase7/c7_program_numbers.raw.txt`). **Unsupported in part (#54):** the out-of-roster 404, invalid `activity_type` 400, outreach retry 200, and pre-group 403 do not appear in the deployed app's request logs (0 4xx responses in the whole telemetry window, `phase7/c10_b6_app_telemetry.raw.txt`) and no app test covers them. Settings 201 + idempotent 200, outreach 201, `/api/me`, and the 39-item worklist scope are confirmed there |
+| `phase5/app_validation.md` | #50-#57 | **Superseded in part (B5):** the Program tab capture shows 7-day follow-up 49.7% / +2.7 pts, changed by #59 to 50.8% / +3.9 (current values in `phase6/app_validation.md` and `phase7/c7_program_numbers.raw.txt`). **Unsupported as captured, re-tested (#54):** its out-of-roster 404, invalid `activity_type` 400, outreach retry 200, and pre-group 403 do not appear in the deployed app's request logs (0 4xx responses through 2026-11-10, `phase7/c10_b6_app_telemetry.raw.txt`). All four were re-run on the deployed app on 2026-11-13 and confirmed server-side (`phase7/app_checks_console.txt`, `phase7/app_checks_request_logs.raw.txt`). Settings 201 + idempotent 200, outreach 201, `/api/me`, and the 39-item worklist scope were already confirmed |
 | `phase5/audit_event_validation.raw.txt` | #55 | Current for event counts and joins. Its "PHI scan: 0 hits" ran inside the redaction window and is **replaced** by `phase7/c1_phi_content_checks.raw.txt` |
 | `phase5/outcome_validation.raw.txt` | #52, #53 | Current |
 | `phase5/settings_validation.raw.txt`, `settings_validation_insert.log`, `pipeline_run_3_settings.log` | #51 | Current |
@@ -119,10 +121,15 @@ All read-only except C11, which runs in a rolled-back transaction.
 | same | C4: leadership test (#65) | Author: `is_member` true, `is_account_group_member` false; the facility filter returns all 5 facilities |
 | same | C5: #67 | `care_team_assignment`: 1 care manager, 5 active rows, all 5 facilities. Two `event_log_*` tables in gold, last altered 2026-11-10 |
 | `cli_checks.txt` | C2-C6 via CLI | Policy definitions on all four schemas: `to` account users, `except` the author only. DataClassification SP identity. Account API refused ("disabled for users without account admin status", #65). `care_mgmt_leadership` is a WorkspaceGroup with the author as its member. Sync pipelines 2051653d / 79bc3344 write to `readmission_worklist_gold`. Model: `@champion` = `@challenger` = v16 (as of 2026-11-01), test AUC 0.745, Brier 0.111, calibration slope 1.00, promoted |
-| `c7_program_numbers.raw.txt` | C7: Program tab numbers from the app's own queries | Equal to `phase6/metric_view_headline.txt`: readmission 14.36% vs 14.99% prior year, follow-up 50.8% vs 46.9%, reach 64.3%, cost avoided $2,641,204 (176) / $2,201,449 (147) |
+| `c7_program_numbers.raw.txt` | C7: Program tab numbers from the app's own queries, before the refresh (superseded by `refresh_6_program_numbers.raw.txt`) | Equal to `phase6/metric_view_headline.txt`: readmission 14.36% vs 14.99% prior year, follow-up 50.8% vs 46.9%, reach 64.3%, cost avoided $2,641,204 (176) / $2,201,449 (147) |
 | `c8_unit_tests.txt` | C8: unit tests | pytest 72 passed, 3 skipped (local machine has no XGBoost library or Java for local Spark); vitest 6 passed |
 | `c9_bundle_validate_plan.txt` | C9: bundle | Validation OK. Plan: 0 add, 9 change, 0 delete, 18 unchanged. Changes: 7 jobs (per-deploy wheel path, #28); app `config.env` (values read back as null, old = new); Genie space permissions (the app service principal holds CAN_RUN remotely, not declared in the bundle). The Genie space's remote `serialized_space` differs from the bundle's (plan action `skip`) |
 | `c10_b6_app_telemetry.raw.txt` | C10: #54 access-scope responses; B6 | See Phase 5 and Phase 6 notes above. Also: `care_management_silver.app_audit_event` lags bronze (3 `genie.asked` and 4 `worklist.viewed` records since 2026-11-09 are not curated yet) because the pipeline has not run since 2026-11-07 |
+| `refresh_1_source_simulator.log`, `refresh_2_daily_cycle.log` | Data refresh (2026-11-13) | 7 extract dates landed (plus 17 late-arriving records); worklist days 2026-11-07..13 scored with v16 and built, 325 briefs, 0 errors; publish UC = Postgres 1,422 / 50 rows, app read grants re-applied |
+| `refresh_3_write_path_check.raw.txt` | #62 write path under the project's policies | 187 silver patient rows and 325 worklist rows written after the policies existed, 0 masked or redacted, in UC and in the Lakebase copy; 28 project tags intact, 0 `class.*`; silver audit events caught up with bronze |
+| `refresh_4_outreach_simulator.log`, `refresh_5_pipeline.log` | Outreach for the new days, then pipeline update 6bf73f | 765 simulated calls inserted, 0 stale deleted, reach rate 0.598 |
+| `refresh_6_program_numbers.raw.txt` | **Current Program numbers (deck)** | Latest worklist day 2026-11-13. Readmission 14.43% vs 15.02% prior year; 7-day follow-up 50.8% vs 47.0%; reach 64.4%; cost avoided $2,628,272 (175 readmissions, within tier) and $2,208,028 (147, vs prior year); 8,965 items, 366 overflow. Silver outreach = CDF current state (21,568) |
+| `app_checks_console.txt`, `app_checks_request_logs.raw.txt` | #54 app access checks on the deployed app (2026-11-13) | Out-of-scope item: 404 on read and on write, no row written. Invalid `activity_type`: 400. Retried `client_request_id`: 201 then 200, same `activity_id`, one CDF row. Author removed from `care_mgmt_leadership`: `isLeader` false, 403 on Program Settings read and write, no change written. Every status matched in the app's request logs; only the 201 emitted `outreach.logged` |
 | `c11_lakebase_privilege_check.txt` | C11: #68 | Synced tables owned by `databricks_writer_16845`. Refused: `ALTER DEFAULT PRIVILEGES FOR ROLE` ("permission denied to change default privileges") and `GRANT databricks_reader_16845` ("Only roles with the ADMIN option … may grant this role"). App role can SELECT both synced tables today. Rolled back |
 
 ## Decision to evidence map
@@ -153,13 +160,13 @@ All read-only except C11, which runs in a rolled-back transaction.
 | 40-44 | `phase4/` (see table) | #41 storage superseded by #48 |
 | 45-48 | `phase4/v4_*`, `daily_cycle_v4.log`, `publish_snapshot_test.log`; #48 correction in `phase7/c2_c5_governance_checks.raw.txt`, `phase7/cli_checks.txt` | |
 | 50-53 | `phase5/pipeline_run_*.log`, `outcome_validation.raw.txt`, `settings_validation.raw.txt` | |
-| 54 | `phase5/app_validation.md`, `phase7/c10_b6_app_telemetry.raw.txt` | 404 / 400 / outreach retry / 403 unsupported (see Phase 5) |
+| 54 | `phase5/app_validation.md`, `phase7/c10_b6_app_telemetry.raw.txt`, `phase7/app_checks_console.txt`, `phase7/app_checks_request_logs.raw.txt` | 404 / 400 / outreach retry / 403 re-tested 2026-11-13 |
 | 55 | `phase5/audit_event_validation.raw.txt`, `phase7/c1_phi_content_checks.raw.txt` | |
 | 56 | `phase5/app_deploy_*.log` | |
 | 57-59 | `phase6/app_validation.md`, `phase6/metric_view_*`, `phase7/c7_program_numbers.raw.txt` | `phase5/app_validation.md` shows pre-#59 values |
 | 60 | `phase6/redaction_repair_*`, `phase7/c2_c5_governance_checks.raw.txt` (C3), `phase7/cli_checks.txt` | Fifth tag found in Phase 7 |
 | 61 | `phase6/metric_view_*`, `phase7/c7_program_numbers.raw.txt` | |
-| 62 | `phase6/governance_run_*`, `abac_validation_sp_3/_4`, `phase7/cli_checks.txt`, `phase7/c2_c5_governance_checks.raw.txt` | Write path under the policies not yet exercised |
+| 62 | `phase6/governance_run_*`, `abac_validation_sp_3/_4`, `phase7/cli_checks.txt`, `phase7/c2_c5_governance_checks.raw.txt`, `phase7/refresh_3_write_path_check.raw.txt` | Write path under the policies proven 2026-11-13 |
 | 63 | `phase6/genie_*`, `phase7/c10_b6_app_telemetry.raw.txt` | |
 | 64 | `phase6/classification_off_check.txt` | |
 | 65 | `phase6/abac_validation_sp_1` / `_3`, `phase7/c2_c5_governance_checks.raw.txt` (C4), `phase7/cli_checks.txt` | |
@@ -171,6 +178,6 @@ All read-only except C11, which runs in a rolled-back transaction.
 
 - The facility filter's assigned-subset branch is untested end to end: one care manager, assigned to all five facilities (#67).
 - Prod deployment as the service principal has never run (#67).
-- The pipeline's write path under the project's own ABAC policies has not been exercised (no refresh since 2026-11-09 02:05 UTC).
-- The app's out-of-roster 404, invalid-activity 400, and outreach-retry responses (#54) have no committed evidence.
+- The app's out-of-scope check (#54) uses an item aged out of the synced window; an other-facility item needs a second care manager (#67).
+- `readmission_outcome` refreshes in `ingest_curate`, before `build_worklist`, so the Program tab and Genie trail the newest worklist day by one daily cycle.
 - Open items in DECISIONS.md: telemetry delivery semantics through Zerobus, SDP foreign keys.

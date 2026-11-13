@@ -1,0 +1,31 @@
+# App access-scope checks on the deployed dev-readmission-worklist (#54), run by the author in Chrome DevTools
+# on 2026-11-13, signed in as ryan.rabold@databricks.com. Scripts: see the Phase 7 notes in evidence/README.md.
+# Server-side confirmation from the app's own request logs: app_checks_request_logs.raw.txt.
+#
+# Item A (visible): b3a1642ccb141970835fb7cc9950931205245c72a34d4606001512fbbeb8e302, worklist day 2026-11-13, FAC-LMC
+# Item B (real item outside the user's scope): 004e03c77413df74e837e386b1e1a59e33c278c71a0dc35f07fc12d8f6b5c47d,
+#   worklist day 2026-10-14, aged out of the 30-day synced window (synced 2026-10-15..2026-11-13).
+# Limit: the author is rostered at all five facilities, so no other-facility item exists for this user;
+#   check 1 shows out-of-scope -> 404 and no write, not the facility exclusion itself (#67).
+# Console output below is as pasted by the author; browser stack-trace lines (VM..., call @) removed.
+
+## Checks 1-3
+2026-11-13T15:02:03.593Z 1a control: visible item GET 200
+GET .../api/worklist/items/004e03c7...c5c47d 404 (Not Found)
+2026-11-13T15:02:03.640Z 1b out-of-scope item GET 404 Worklist item not found
+POST .../api/worklist/items/004e03c7...c5c47d/outreach 404 (Not Found)
+2026-11-13T15:02:03.700Z 1c write to out-of-scope item POST 404 Worklist item not found
+POST .../api/worklist/items/b3a1642c...b8e302/outreach 400 (Bad Request)
+2026-11-13T15:02:03.740Z 2 invalid activity_type POST 400 Invalid outreach ['activity_type: Invalid option: expected one of "NO_ANSWER"|"LEFT_VOICEMAIL"|"REACHED"|"FOLLOWUP_BOOKED"|"DECLINED"|"UNREACHABLE"']
+2026-11-13T15:02:03.807Z 3a first submit POST 201   388a16ca-af32-42ed-b6a1-4070b898fb78
+2026-11-13T15:02:03.860Z 3b retry, same client_request_id POST 200   388a16ca-af32-42ed-b6a1-4070b898fb78
+3c same activity_id: true client_request_id: c10cdb54-cbeb-40c3-aa70-2200a1be92b5
+
+## Check 4 (author removed from care_mgmt_leadership, then waited past the app's 5-minute leader cache)
+UI: "Leadership" badge gone; Program Settings shows "Program Settings is for care management leadership.
+Ask an administrator to add ryan.rabold@databricks.com to the care_mgmt_leadership group."
+2026-11-13T15:11:57.016Z GET /api/me 200 isLeader=false
+GET .../api/settings/changes 403 (Forbidden)
+2026-11-13T15:11:57.055Z GET /api/settings/changes 403 Program Settings is limited to care management leadership
+POST .../api/settings/changes 403 (Forbidden)
+2026-11-13T15:11:57.093Z POST /api/settings/changes 403 Program Settings is limited to care management leadership
