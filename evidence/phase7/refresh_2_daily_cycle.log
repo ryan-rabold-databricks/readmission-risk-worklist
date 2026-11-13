@@ -1,0 +1,71 @@
+Run URL: https://fevm-classic-stable-v61z4f.cloud.databricks.com/jobs/773178160265376/runs/656628581438613?o=7474647046080636
+
+2026-11-13 08:56:28 "dev_readmit_daily_cycle" RUNNING
+2026-11-13 09:10:24 "dev_readmit_daily_cycle" TERMINATED SUCCESS
+Output:
+=======
+Task score_discharges:
+{"ts": "2026-11-13 13:59:32.124", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cilqb2JzLzc3MzE3ODE2MDI2NTM3Ni9ydW5zLzY1NjYyODU4MTQzODYxMxABIAEqJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMTIkMDFhMWQ1MzQtM2Q4Ni03ZTBiLTg0NGMtZmFmYmRhOWI5YzEyOiRkYjE0Zjc4Mi04MDg2LTNjYzQtYmM4ZS02MDQ5Mjk3ZmMyMzZCJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMUoLCJ2v3NcGEICXyB1QAlgBYAFo/JCDkO7Eow2IAQA=.", "context": {}}
+{"ts": "2026-11-13 13:59:32.124", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cilqb2JzLzc3MzE3ODE2MDI2NTM3Ni9ydW5zLzY1NjYyODU4MTQzODYxMxABIAEqJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMTIkMDFhMWQ1MzQtM2Q4Ni03ZTBiLTg0NGMtZmFmYmRhOWI5YzEyOiRkYjE0Zjc4Mi04MDg2LTNjYzQtYmM4ZS02MDQ5Mjk3ZmMyMzZCJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMUoLCJ2v3NcGEICXyB1QAlgBYAFo/JCDkO7Eow2IAQA=.", "context": {}}
+{"ts": "2026-11-13 13:59:32.124", "level": "WARNING", "logger": "pyspark.sql.connect.logging", "msg": "Effective usage policy for this session is cct.Cilqb2JzLzc3MzE3ODE2MDI2NTM3Ni9ydW5zLzY1NjYyODU4MTQzODYxMxABIAEqJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMTIkMDFhMWQ1MzQtM2Q4Ni03ZTBiLTg0NGMtZmFmYmRhOWI5YzEyOiRkYjE0Zjc4Mi04MDg2LTNjYzQtYmM4ZS02MDQ5Mjk3ZmMyMzZCJGNmN2FiYWE2LWY2OTAtNGQ5MC1hYTFkLTBkMjM0YWU0YzdmMUoLCJ2v3NcGEICXyB1QAlgBYAFo/JCDkO7Eow2IAQA=.", "context": {}}
+Unexpected status resolving file endpoints (403, request ID fcc56167-6d95-48e2-803c-fd4db5c28e91), using the default endpoints.
+
+
+2026-11-07: scored 159 discharges with v16
+2026-11-08: scored 111 discharges with v16
+2026-11-09: scored 108 discharges with v16
+2026-11-10: scored 171 discharges with v16
+2026-11-11: scored 160 discharges with v16
+2026-11-12: scored 178 discharges with v16
+2026-11-13: scored 153 discharges with v16
+
+=======
+Task build_worklist:
+{'worklist_date': '2026-11-07', 'items': 43, 'ASSIGNED': 43, 'roster_capacity': 50}
+{'worklist_date': '2026-11-08', 'items': 35, 'ASSIGNED': 35, 'roster_capacity': 50}
+{'worklist_date': '2026-11-09', 'items': 42, 'ASSIGNED': 42, 'roster_capacity': 50}
+{'worklist_date': '2026-11-10', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+{'worklist_date': '2026-11-11', 'items': 47, 'ASSIGNED': 47, 'roster_capacity': 50}
+{'worklist_date': '2026-11-12', 'items': 58, 'ASSIGNED': 50, 'OVERFLOW': 8, 'roster_capacity': 50}
+{'worklist_date': '2026-11-13', 'items': 50, 'ASSIGNED': 50, 'roster_capacity': 50}
+{'briefs_requested': 325, 'briefs_written': 325, 'brief_errors': 0, 'sample_errors': []}
+
+=======
+Task publish_worklist:
+{
+  "run_date": "2026-11-13",
+  "tables": {
+    "care_worklist_synced": {
+      "pipeline_id": "79bc3344-3bf2-41d7-85c0-9b6215af1a2e",
+      "update_id": "5dbce39b-22cf-40c1-bc1e-4b73cdd78549",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 1422,
+        "day": 50
+      },
+      "pg_rows": {
+        "total": 1422,
+        "day": 50
+      }
+    },
+    "care_team_roster_synced": {
+      "pipeline_id": "2051653d-2e68-439e-95ae-74fcd727038d",
+      "update_id": "bd71a683-5436-493e-ac38-1d224fc7849f",
+      "state": "COMPLETED",
+      "uc_rows": {
+        "total": 150,
+        "day": 5
+      },
+      "pg_rows": {
+        "total": 150,
+        "day": 5
+      }
+    }
+  },
+  "app_read_grants": {
+    "role": "c21146c6-b973-4b42-a0cb-6cc41e5e777c",
+    "tables_missing_select": 0
+  }
+}
+
+(exit 0)
